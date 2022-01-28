@@ -1,0 +1,9 @@
+{
+    "files.associations": {
+        "stdio.h": "c",
+        "paillier.h": "c",
+        "stdlib.h": "c",
+        "sha.h": "c",
+        "openssl_bn.h": "c",
+    }
+}
