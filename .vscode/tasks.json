@@ -2,12 +2,20 @@
     "tasks": [
         {
             "type": "cppbuild",
-            "label": "C/C++: gcc sestavit aktivní soubor",
+            "label": "C/C++: gcc sestavit main soubor",
             "command": "/usr/bin/gcc",
             "args": [
                 "-fdiagnostics-color=always",
                 "-g",
-                "${file}",
+                "-I/usr/local/include/openssl",
+                "-I${workspaceFolder}/headers",
+                "${workspaceFolder}/src/paillier_scheme1.c",
+                "${workspaceFolder}/src/openssl_bn.c",
+                "${workspaceFolder}/src/homomorphy_functions.c",
+                "${workspaceFolder}/src/paillier_scheme3.c",
+                "${workspaceFolder}/main.c",
+                "-lssl",
+                "-lcrypto",
                 "-o",
                 "${fileDirname}/${fileBasenameNoExtension}"
             ],
@@ -18,29 +26,6 @@
                 "$gcc"
             ],
             "group": "build",
-            "detail": "Úloha vygenerovaná ladicím programem"
-        },
-        {
-            "type": "cppbuild",
-            "label": "C/C++: gcc sestavit aktivní soubor ver(1)",
-            "command": "/usr/bin/gcc",
-            "args": [
-                "-fdiagnostics-color=always",
-                "-g",
-                "${file}",
-                "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
-            ],
-            "options": {
-                "cwd": "${fileDirname}"
-            },
-            "problemMatcher": [
-                "$gcc"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
             "detail": "Úloha vygenerovaná ladicím programem"
         }
     ],

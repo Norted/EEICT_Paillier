@@ -1,9 +1,16 @@
 {
     "files.associations": {
         "stdio.h": "c",
-        "paillier.h": "c",
         "stdlib.h": "c",
         "sha.h": "c",
-        "openssl_bn.h": "c",
+        "support_functions.h": "c",
+        "paillier.h": "c",
+        "homomorphy_functions.h": "c",
+        "string.h": "c",
+        "parameters.h": "c",
+        "*.tcc": "c",
+        "algorithm": "c",
+        "random": "c",
+        "paillier_scheme1.h": "c"
     }
 }
