@@ -92,10 +92,6 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
         return 0;
     
     BIGNUM *p_1 = BN_new();
-    BIGNUM *p_2 = BN_new();
-    BIGNUM *p_3 = BN_new();
-    BIGNUM *rem = BN_new();
-    const BIGNUM *one = BN_value_one();
 
     err = BN_mod_exp(p_1, g, l_or_a, n_sq, ctx);
     if(err == 0) {
@@ -103,6 +99,9 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
         BN_CTX_free(ctx);
         return err;
     }
+
+    BIGNUM *p_2 = BN_new();
+    const BIGNUM *one = BN_value_one();
     err = BN_sub(p_1, one, p_2);
     if(err == 0) {
         BN_free(p_1);
@@ -110,10 +109,14 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
         BN_CTX_free(ctx);
         return err;
     }
+
+    BIGNUM *p_3 = BN_new();
+    BIGNUM *rem = BN_new();
     err = BN_div(p_3, rem, p_2, n, ctx);
     if(err == 0) {
         BN_free(p_1);
         BN_free(p_2);
+        BN_free(p_3);
         BN_free(rem);
         BN_CTX_free(ctx);
         return err;
@@ -123,14 +126,23 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
     BN_free(p_2);
     BN_free(rem);
 
-    BN_mod_inverse(mi, p_3, n, ctx); // FIX ME!!!
-    if(BN_cmp(mi, "0") == 1) {
+    BIGNUM *inv = BN_new();
+    BIGNUM *zero = BN_new();
+    BN_dec2bn(&zero, "0");
+
+    BN_mod_inverse(inv, p_3, n, ctx); // FIX ME!!!
+    if(BN_cmp(inv, zero) == 1) {
         BN_free(p_3);
+        BN_free(inv);
+        BN_free(zero);
         BN_CTX_free(ctx);
         return 0;
     }
+    BN_copy(mi, inv);
 
     BN_free(p_3);
+    BN_free(inv);
+    BN_free(zero);
     BN_CTX_free(ctx);
     
     return err;
