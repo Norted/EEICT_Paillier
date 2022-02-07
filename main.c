@@ -14,8 +14,9 @@ int main() {
     unsigned int err = 0;
 
     /*  SCHEME 1 TEST    */
-        printf("\n========= SCHEME 1 ==================\n");
-        struct Keychain_scheme1 keyring_scheme1 = {{""}};
+        printf("\n========= SCHEME 1 =================\n");
+        struct Keychain_scheme1 keyring_scheme1;
+        scheme1_init_keychain(&keyring_scheme1);
         
         start = clock();
         err += scheme1_generate_keypair(&keyring_scheme1);
@@ -25,12 +26,12 @@ int main() {
 
 
         printf("ERR: %u\nKEYS:\n|--> LAMBDA: %s\n|--> MI: %s\n|--> N: %s\n|--> N_SQ: %s\n|--> G: %s\n",
-            err, BN_bn2dec(keyring_scheme1.sk.lambda), BN_bn2dec(keyring_scheme1.sk.mi), BN_bn2dec(keyring_scheme1.pk.n),
-            BN_bn2dec(keyring_scheme1.pk.n_sq), BN_bn2dec(keyring_scheme1.pk.g));
+            err, BN_bn2dec(keyring_scheme1.sk.lambda), BN_bn2dec(keyring_scheme1.sk.mi), BN_bn2dec(keyring_scheme1.pk->n),
+            BN_bn2dec(keyring_scheme1.pk->n_sq), BN_bn2dec(keyring_scheme1.pk->g));
 
 
         BIGNUM *secret = BN_new();
-        BN_dec2bn(secret, "125");
+        BN_dec2bn(&secret, "125");
         printf("SECRET: %s\n", BN_bn2dec(secret));
 
         BIGNUM *enc = BN_new();
@@ -55,6 +56,7 @@ int main() {
         printf("DEC: %s\n", BN_bn2dec(dec));
 
         
+        scheme1_free_keychain(&keyring_scheme1);
 
     printf("\n");
     

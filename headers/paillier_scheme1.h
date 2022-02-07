@@ -12,11 +12,13 @@ struct PrivateKey_scheme1 {
 
 struct Keychain_scheme1 {
     struct PrivateKey_scheme1 sk;
-    struct PublicKey pk;
+    struct PublicKey *pk;
 };
 
 unsigned int scheme1_generate_keypair(struct Keychain_scheme1 *keyring);
-unsigned int scheme1_encrypt(struct PublicKey pk, BIGNUM *plain, BIGNUM *cipher);
+unsigned int scheme1_encrypt(struct PublicKey *pk, BIGNUM *plain, BIGNUM *cipher);
 unsigned int scheme1_decrypt(struct Keychain_scheme1 *keyring, BIGNUM *cipher, BIGNUM *plain);
+void scheme1_init_keychain(struct Keychain_scheme1 *keychain);
+void scheme1_free_keychain(struct Keychain_scheme1 *keychain);
 
 #endif

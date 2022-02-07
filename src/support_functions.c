@@ -1,20 +1,24 @@
 #include <support_functions.h>
 
 unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *g) {
-    DSA *dsa = DSA_new();
-    BN_GENCB *cb = BN_GENCB_new();
-    unsigned char *rnd_seed = SEED;
-    int counter_ret = 0;
-    unsigned long h_ret = 0;
-    RAND_seed(rnd_seed, sizeof(rnd_seed));
+    unsigned int err = 0;
+    const DSA *dsa = DSA_new();
+    BIGNUM *dsa_p = BN_new();
+    BIGNUM *dsa_q = BN_new();
+    BIGNUM *dsa_g = BN_new();
 
-    unsigned int err = DSA_generate_parameters_ex(&dsa, BITS, rnd_seed, sizeof(rnd_seed), &counter_ret, &h_ret, &cb);
-    DSA_get0_pqg(dsa, p, q, g);
+    err += DSA_generate_parameters_ex(dsa, BITS, NULL, 0, NULL, NULL, NULL);
+    DSA_get0_pqg(dsa, &dsa_p, &dsa_q, &dsa_g);
+
+    BN_copy(p, dsa_p);
+    BN_copy(q, dsa_q);
+    BN_copy(g, dsa_g);
 
     DSA_free(dsa);
-    BN_GENCB_free(cb);
 
-    return err;
+    if(err != 1)
+        return 0;
+    return 1;
 }
 
 unsigned int lcm(BIGNUM *a, BIGNUM *b, BIGNUM *res) {
@@ -119,8 +123,8 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
     BN_free(p_2);
     BN_free(rem);
 
-    BN_mod_inverse(mi, p_3, n, ctx);
-    if(BN_cmp(mi, "0") != 1) {
+    BN_mod_inverse(mi, p_3, n, ctx); // FIX ME!!!
+    if(BN_cmp(mi, "0") == 1) {
         BN_free(p_3);
         BN_CTX_free(ctx);
         return 0;

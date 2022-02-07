@@ -16,8 +16,8 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
 
     strcpy(keyring->sk.p, keyring1.sk.p);
     strcpy(keyring->sk.q, keyring2.sk.p);
-    err += BN_mul(keyring->pk.n, keyring->sk.p, keyring->sk.q, ctx);
-    err += BN_exp(keyring->pk.n_sq, keyring->pk.n, "2", ctx);
+    err += BN_mul(keyring->pk->n, keyring->sk.p, keyring->sk.q, ctx);
+    err += BN_exp(keyring->pk->n_sq, keyring->pk->n, "2", ctx);
 
     BIGNUM *lambda = BN_new();
     err += lcm(keyring->sk.p, keyring->sk.q, lambda);
@@ -32,9 +32,9 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
 
         BIGNUM *res1 = BN_new();
         BIGNUM *res2 = BN_new();
-        err += _CRT_part(prod, p_sq, keyring1.pk.g, res1);
-        err += _CRT_part(prod, q_sq, keyring2.pk.g, res2);
-        err += BN_mod_add(keyring->pk.g, res1, res2, prod, ctx);
+        err += _CRT_part(prod, p_sq, keyring1.pk->g, res1);
+        err += _CRT_part(prod, q_sq, keyring2.pk->g, res2);
+        err += BN_mod_add(keyring->pk->g, res1, res2, prod, ctx);
     //
     BN_free(prod);
     BN_free(p_sq);
@@ -56,8 +56,8 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
     // Check if g is the order of alpha*n in Z*_nsquared
     BIGNUM *chck2 = BN_new();
     BIGNUM *alpha_mul_n = BN_new();
-    err += BN_mul(alpha_mul_n, keyring->sk.alpha, keyring->pk.n, ctx);
-    err += BN_mod_exp(chck2, keyring->pk.g, alpha_mul_n, keyring->pk.n_sq, ctx);
+    err += BN_mul(alpha_mul_n, keyring->sk.alpha, keyring->pk->n, ctx);
+    err += BN_mod_exp(chck2, keyring->pk->g, alpha_mul_n, keyring->pk->n_sq, ctx);
     if(BN_cmp(chck2, "0") != 1) {
         BN_free(chck2);
         BN_free(alpha_mul_n);
@@ -66,7 +66,7 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
     BN_free(chck2);
     BN_free(alpha_mul_n);
     
-    err += count_mi(keyring->sk.mi, keyring->pk.g, keyring->sk.alpha, keyring->pk.n_sq, keyring->pk.n);
+    err += count_mi(keyring->sk.mi, keyring->pk->g, keyring->sk.alpha, keyring->pk->n_sq, keyring->pk->n);
 
     BN_CTX_free(ctx);
 
@@ -75,7 +75,7 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
     return 1;
 }
 
-unsigned int scheme3_encrypt(struct PublicKey pk, unsigned char *plain, unsigned char *cipher) {
+unsigned int scheme3_encrypt(struct PublicKey *pk, unsigned char *plain, unsigned char *cipher) {
 
 }
 
@@ -90,17 +90,21 @@ unsigned int _keyring_gen(struct Keychain_scheme3 *keyring) {
     if(!ctx)
         return 0;
     
-    err += gen_pqg_params(keyring->sk.p, keyring->sk.q, keyring->pk.g);
-    err += BN_mul(keyring->pk.n, keyring->sk.p, keyring->sk.q, ctx);
-    err += BN_exp(keyring->pk.n_sq, keyring->pk.n, "2", ctx);
+    BIGNUM *two = BN_new();
+    BN_dec2bn(&two, "2");
+    
+    err += gen_pqg_params(keyring->sk.p, keyring->sk.q, keyring->pk->g);
+    err += BN_mul(keyring->pk->n, keyring->sk.p, keyring->sk.q, ctx);
+    err += BN_exp(keyring->pk->n_sq, keyring->pk->n, two, ctx);
 
     BIGNUM *psq = BN_new();
     BIGNUM *mod = BN_new();
-    err += BN_exp(psq, keyring->sk.p, "2", ctx);
-    err += BN_mod_exp(mod, keyring->pk.g, keyring->pk.n, psq, ctx);
+    err += BN_exp(psq, keyring->sk.p, two, ctx);
+    err += BN_mod_exp(mod, keyring->pk->g, keyring->pk->n, psq, ctx);
 
     BN_free(psq);
     BN_free(mod);
+    BN_free(two);
     BN_CTX_free(ctx);
     
     if (err != 5 || BN_cmp(mod, "1") != 0)
@@ -167,4 +171,28 @@ unsigned int _CRT_part(BIGNUM *prod, BIGNUM *n, BIGNUM *a, BIGNUM *res) {
     if (err != 3)
         return 0;
     return 1;
+}
+
+void scheme3_init_keychain(struct Keychain_scheme3 *keychain) {
+    keychain->pk->g = BN_new();
+    keychain->pk->n = BN_new();
+    keychain->pk->n_sq = BN_new();
+    keychain->sk.alpha = BN_new();
+    keychain->sk.mi = BN_new();
+    keychain->sk.p = BN_new();
+    keychain->sk.q = BN_new();
+
+    return;
+}
+
+void scheme3_free_keychain(struct Keychain_scheme3 *keychain) {
+    BN_free(keychain->pk->g);
+    BN_free(keychain->pk->n);
+    BN_free(keychain->pk->n_sq);
+    BN_free(keychain->sk.alpha);
+    BN_free(keychain->sk.mi);
+    BN_free(keychain->sk.p);
+    BN_free(keychain->sk.q);
+
+    return;
 }
