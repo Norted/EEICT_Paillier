@@ -1,13 +1,93 @@
 #include <support_functions.h>
 
-unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *g) {
+unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicKey *pk) {
+    unsigned int err = 0;
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+        return 0;
+
+    const BIGNUM *one = BN_value_one();
+    BIGNUM *p_sub = BN_new();
+    BIGNUM *q_sub = BN_new();
+    BIGNUM *pq_sub = BN_new();
+    BIGNUM *tmp_gcd = BN_new();
+    int i = 0;
+
+    for(i; i < MAXITER; i ++) {
+        err += BN_generate_prime_ex2(p, BITS, 1, NULL, NULL, NULL, ctx);
+        err += BN_generate_prime_ex2(q, BITS, 1, NULL, NULL, NULL, ctx);
+        err += BN_mul(pk->n, p, q, ctx);
+
+        err += BN_sub(p_sub, p, one);
+        err += BN_sub(q_sub, q, one);
+        err += BN_mul(pq_sub, p_sub, q_sub, ctx);
+
+        err += BN_gcd(tmp_gcd, pk->n, pq_sub, ctx);
+        if(BN_is_one(tmp_gcd) == 1)
+            break;
+        err -= 7;
+    }
+    BN_free(one);
+    BN_free(p_sub);
+    BN_free(q_sub);
+    BN_free(pq_sub);
+
+    if(i == MAXITER) {
+        printf("MAXITER! P, Q not generated!\n");
+        BN_free(tmp_gcd);
+        BN_CTX_free(ctx);
+        return 0;
+    }
+    
+    const BIGNUM *two = BN_new();
+    BN_dec2bn(&two, "2");
+    err += BN_exp(pk->n_sq, pk->n, two, ctx);
+    BN_free(two);
+
+    err += lcm(p, q, l_or_a); // operation in function ((p-1) * (q-1)) / gcd((p-1), (q-1)) 
+
+    i = 0;
+    BIGNUM *tmp_g = BN_new();
+    BIGNUM *tmp_u = BN_new();
+    for(i; i < MAXITER; i++) {
+        err += BN_rand_range(tmp_g, pk->n_sq);
+        err += BN_gcd(tmp_gcd, tmp_g, pk->n_sq, ctx);
+        if(BN_is_one(tmp_gcd) != 1) {
+            err -= 2;
+            continue;
+        }
+        
+        err += BN_mod_exp(tmp_u, tmp_g, l_or_a, pk->n_sq, ctx);
+        err += L(tmp_u, pk->n, tmp_u);
+        err += BN_gcd(tmp_gcd, tmp_u, pk->n, ctx);
+        if(BN_is_one(tmp_gcd) == 1) {
+            BN_copy(pk->g, tmp_g);
+            break;
+        }
+        err -= 5;
+    }
+    BN_free(tmp_g);
+    BN_free(tmp_gcd);
+    BN_free(tmp_u);
+
+    if(i == MAXITER) {
+        printf("MAXITER! G not found!\n");
+        return 0;
+    }
+
+    if(err != 14)
+        return 0;
+    return 1;
+}
+
+unsigned int gen_DSA_params(BIGNUM *p, BIGNUM *q, BIGNUM *g) {
     unsigned int err = 0;
     const DSA *dsa = DSA_new();
     BIGNUM *dsa_p = BN_new();
     BIGNUM *dsa_q = BN_new();
     BIGNUM *dsa_g = BN_new();
 
-    err += DSA_generate_parameters_ex(dsa, BITS, NULL, 0, NULL, NULL, NULL);
+    err += DSA_generate_parameters_ex(dsa, BITS*2, NULL, 0, NULL, NULL, NULL);
     DSA_get0_pqg(dsa, &dsa_p, &dsa_q, &dsa_g);
 
     BN_copy(p, dsa_p);
@@ -91,59 +171,66 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
     if(!ctx)
         return 0;
     
-    BIGNUM *p_1 = BN_new();
+    BIGNUM *u = BN_new();
 
-    err = BN_mod_exp(p_1, g, l_or_a, n_sq, ctx);
+    err = BN_mod_exp(u, g, l_or_a, n_sq, ctx);
     if(err == 0) {
-        BN_free(p_1);
+        BN_free(u);
         BN_CTX_free(ctx);
         return err;
     }
 
-    BIGNUM *p_2 = BN_new();
-    const BIGNUM *one = BN_value_one();
-    err = BN_sub(p_1, one, p_2);
+    err = L(u, n, u);
     if(err == 0) {
-        BN_free(p_1);
-        BN_free(p_2);
+        BN_free(u);
         BN_CTX_free(ctx);
         return err;
     }
-
-    BIGNUM *p_3 = BN_new();
-    BIGNUM *rem = BN_new();
-    err = BN_div(p_3, rem, p_2, n, ctx);
-    if(err == 0) {
-        BN_free(p_1);
-        BN_free(p_2);
-        BN_free(p_3);
-        BN_free(rem);
-        BN_CTX_free(ctx);
-        return err;
-    }
-    
-    BN_free(p_1);
-    BN_free(p_2);
-    BN_free(rem);
 
     BIGNUM *inv = BN_new();
-    BIGNUM *zero = BN_new();
-    BN_dec2bn(&zero, "0");
+    BN_mod_inverse(inv, u, n, ctx);
 
-    BN_mod_inverse(inv, p_3, n, ctx); // FIX ME!!!
-    if(BN_cmp(inv, zero) == 1) {
-        BN_free(p_3);
+    if(BN_is_zero(inv) == 1) {
+        BN_free(u);
         BN_free(inv);
-        BN_free(zero);
         BN_CTX_free(ctx);
         return 0;
     }
     BN_copy(mi, inv);
 
-    BN_free(p_3);
+    BN_free(u);
     BN_free(inv);
-    BN_free(zero);
     BN_CTX_free(ctx);
     
+    return err;
+}
+
+unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res) {
+    unsigned int err = 0;
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+        return 0;
+    const BIGNUM *one = BN_value_one();
+
+    err = BN_sub(u, u, one);
+    if(err == 0) {
+        BN_free(one);
+        BN_CTX_free(ctx);
+        return err;
+    }
+
+    BN_free(one);
+
+    BIGNUM *rem = BN_new();
+    err = BN_div(res, rem, u, n, ctx);
+    if(err == 0) {
+        BN_free(one);
+        BN_free(rem);
+        BN_CTX_free(ctx);
+        return err;
+    }
+    
+    BN_free(rem);
+
     return err;
 }

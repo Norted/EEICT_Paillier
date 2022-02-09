@@ -11,6 +11,7 @@
 #include <openssl/sha.h>
 #include <openssl/dsa.h>
 #include <openssl/rand.h>
+#include <openssl/err.h>
 #include <support_functions.h>
 #include <paillier_scheme1.h>
 #include <paillier_scheme3.h>

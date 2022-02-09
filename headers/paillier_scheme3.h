@@ -17,7 +17,7 @@ struct Keychain_scheme3 {
 };
 
 unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring);
-unsigned int scheme3_encrypt(struct PublicKey *pk, unsigned char *plain, unsigned char *cipher);
+unsigned int scheme3_encrypt(struct Keychain_scheme3 *keyring, unsigned char *plain, unsigned char *cipher);
 unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, unsigned char *cipher, unsigned char *plain);
 void scheme3_init_keychain(struct Keychain_scheme3 *keychain);
 void scheme3_free_keychain(struct Keychain_scheme3 *keychain);

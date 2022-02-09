@@ -3,8 +3,12 @@
 
 #include <parameters.h>
 
-unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *g);
+#include <support_functions.h>
+
+unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicKey *pk);
+unsigned int gen_DSA_params(BIGNUM *p, BIGNUM *q, BIGNUM *g);
 unsigned int lcm(BIGNUM *a, BIGNUM *b, BIGNUM *res);
 unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNUM *n);
+unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res);
 
 #endif
