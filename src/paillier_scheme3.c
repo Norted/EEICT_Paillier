@@ -99,12 +99,12 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
     return 1;
 }
 
-unsigned int scheme3_encrypt(struct Keychain_scheme3 *keyring, unsigned char *plain, unsigned char *cipher) {
+unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain, BIGNUM *cipher) {
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)
         return 0;
     
-    if(BN_cmp(plain, keyring->pk->n) != -1)
+    if(BN_cmp(plain, pk->n) != -1)
         return 0;
     
     unsigned int stop = 0;
@@ -113,9 +113,9 @@ unsigned int scheme3_encrypt(struct Keychain_scheme3 *keyring, unsigned char *pl
     BIGNUM *gcd = BN_new();
 
     while (stop < MAXITER) {
-        err += BN_rand_range_ex(rnd, keyring->sk.alpha, BITS, ctx);
-        err += BN_gcd(gcd, rnd, keyring->sk.alpha, ctx);
-        if (BN_is_one(gcd) == 1 && BN_is_zero(rnd) == 0 && BN_cmp(rnd, keyring->sk.alpha) == -1 && err == 2)
+        err += BN_rand_range_ex(rnd, alpha, BITS, ctx);
+        err += BN_gcd(gcd, rnd, alpha, ctx);
+        if (BN_is_one(gcd) == 1 && BN_is_zero(rnd) == 0 && BN_cmp(rnd, alpha) == -1 && err == 2)
             break;
         stop ++;
         err -= 2;
@@ -127,11 +127,11 @@ unsigned int scheme3_encrypt(struct Keychain_scheme3 *keyring, unsigned char *pl
         return 0;
 
     BIGNUM *c_1 = BN_new();
-    err += BN_mod_exp(c_1, keyring->pk->g, plain, keyring->pk->n_sq, ctx);
+    err += BN_mod_exp(c_1, pk->g, plain, pk->n_sq, ctx);
     BIGNUM *c_2 = BN_new();
-    err += BN_mod_exp(c_2, keyring->pk->g, keyring->pk->n, keyring->pk->n_sq, ctx);
-    err += BN_mod_exp(c_2, c_2, rnd, keyring->pk->n_sq, ctx);
-    err += BN_mod_mul(cipher, c_1, c_2, keyring->pk->n_sq, ctx);
+    err += BN_mod_exp(c_2, pk->g, pk->n, pk->n_sq, ctx);
+    err += BN_mod_exp(c_2, c_2, rnd, pk->n_sq, ctx);
+    err += BN_mod_mul(cipher, c_1, c_2, pk->n_sq, ctx);
 
     BN_free(rnd);
     BN_free(c_1);
@@ -144,7 +144,7 @@ unsigned int scheme3_encrypt(struct Keychain_scheme3 *keyring, unsigned char *pl
     return 1;
 }
 
-unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, unsigned char *cipher, unsigned char *plain) {
+unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, BIGNUM *cipher, BIGNUM *plain) {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)

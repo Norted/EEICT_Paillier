@@ -128,9 +128,9 @@ unsigned int test_homomorphic_scheme3() {
     BN_free(message_mul);
 
     BIGNUM *cipher_1 = BN_new();
-    err += scheme3_encrypt(&keyring3.pk, message_1, cipher_1);
+    err += scheme3_encrypt(&keyring3.pk, keyring3.sk.alpha, message_1, cipher_1);
     BIGNUM *cipher_2 = BN_new();
-    err += scheme3_encrypt(&keyring3.pk, message_2, cipher_2);
+    err += scheme3_encrypt(&keyring3.pk, keyring3.sk.alpha, message_2, cipher_2);
 
     BIGNUM *cipher_sum_1 = BN_new();
     BIGNUM *dec_cipher_sum_1 = BN_new();
