@@ -37,28 +37,22 @@ unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
     err += BN_exp(keyring->pk->n_sq, keyring->pk->n, two, ctx);
 
     BIGNUM *lambda = BN_new();
-    err += lcm(keyring->sk.p, keyring->sk.q, lambda);
+    err += l_or_a_computation(keyring->sk.p, keyring->sk.q, lambda);
 
     //Chinese Remainder Theorem
-        BIGNUM *prod = BN_new();
         BIGNUM *p_sq = BN_new();
         BIGNUM *q_sq = BN_new();
         err += BN_exp(p_sq, keyring->sk.p, two, ctx);
         err += BN_exp(q_sq, keyring->sk.q, two, ctx);
-        err += BN_mul(prod, p_sq, q_sq, ctx);
-
-        BIGNUM *res1 = BN_new();
-        BIGNUM *res2 = BN_new();
-        err += _CRT_part(prod, p_sq, keyring1.pk->g, res1);
-        err += _CRT_part(prod, q_sq, keyring2.pk->g, res2);
-        err += BN_mod_add(keyring->pk->g, res1, res2, prod, ctx);
+        
+        BIGNUM *num[] = {p_sq, q_sq};
+        BIGNUM *rem[] = {keyring1.pk->g, keyring2.pk->g};
+        int size = sizeof(num) / sizeof(num[0]);
+        err += chinese_remainder_theorem(num, rem, size, keyring->pk->g);
     //
     BN_free(two);
-    BN_free(prod);
     BN_free(p_sq);
     BN_free(q_sq);
-    BN_free(res1);
-    BN_free(res2);
 
     err += BN_mul(keyring->sk.alpha, keyring1.sk.q, keyring2.sk.q, ctx);
     
@@ -212,40 +206,16 @@ unsigned int _keyring_gen(struct Keychain_scheme3 *keyring) {
     err += BN_mod_exp(mod, keyring->pk->g, keyring->pk->n, p_sq, ctx);
 
     BN_free(p_sq);
-    BN_free(mod);
     BN_free(two);
     BN_CTX_free(ctx);
     
-    if (err != 5 || BN_is_one(mod) == 1)
+    if (err != 5 || BN_is_one(mod) != 1) {
+        BN_free(mod);
         return 0;
-        
+    }
+
+    BN_free(mod);
     return 1;
-
-    /* OLD CODE
-        err += bn_genPrime(keyring->sk.p, BITS);
-        err += bn_genPrime(keyring->sk.q, BITS);
-        err += bn_mul(keyring->sk.p, keyring->sk.q, keyring->pk.n);
-        
-        err += bn_exp(keyring->pk.n, "2", keyring->pk.n_sq);
-        
-
-        for(int i = 0; i < MAXITER; i++) {
-            random_str_num_in_range(keyring->pk.g, atoi(keyring->pk.n_sq), 1);
-            unsigned char psq[BUFFER];
-            unsigned char mod[BUFFER];
-            err += bn_exp(keyring->sk.p, "2", psq);
-            err += bn_modexp(keyring->pk.g, keyring->pk.n, psq, mod);
-            if(bn_cmp(mod, "1") != 0) {
-                err -= 2;
-                continue;
-            }
-            break;
-        }
-
-        if (err != 6)
-            return 0;
-        return 1;
-    */
 }
 
 unsigned int _CRT_part(BIGNUM *prod, BIGNUM *n, BIGNUM *a, BIGNUM *res) {
