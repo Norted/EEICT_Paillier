@@ -112,8 +112,8 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain,
     BIGNUM *rnd = BN_new();
     BIGNUM *gcd = BN_new();
 
-    while (stop < MAXITER) {
-        err += BN_rand_range_ex(rnd, alpha, BITS, ctx);
+    while (stop < MAXITER) { // FIX ME!!!
+        err += BN_rand_range_ex(rnd, alpha, NULL, ctx);
         err += BN_gcd(gcd, rnd, alpha, ctx);
         if (BN_is_one(gcd) == 1 && BN_is_zero(rnd) == 0 && BN_cmp(rnd, alpha) == -1 && err == 2)
             break;
@@ -123,8 +123,10 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain,
 
     BN_free(gcd);
         
-    if(BN_is_zero(rnd) == 1 || stop == MAXITER)
+    if(BN_is_zero(rnd) == 1 || stop == MAXITER) {
+        printf("\n\t!!!!! EXCEPTION !!!!!\n\n");
         return 0;
+    }
 
     BIGNUM *c_1 = BN_new();
     err += BN_mod_exp(c_1, pk->g, plain, pk->n_sq, ctx);

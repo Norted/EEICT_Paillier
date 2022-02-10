@@ -2,15 +2,16 @@
     "files.associations": {
         "stdio.h": "c",
         "stdlib.h": "c",
-        "sha.h": "c",
-        "support_functions.h": "c",
-        "paillier.h": "c",
-        "homomorphy_functions.h": "c",
         "string.h": "c",
+        "sha.h": "c",
+        "random": "c",
+        "speed_functions.h": "c",
+        "support_functions.h": "c",
+        "homomorphy_functions.h": "c",
+        "paillier_scheme1.h": "c",
+        "paillier_scheme3.h": "c",
         "parameters.h": "c",
         "*.tcc": "c",
         "algorithm": "c",
-        "random": "c",
-        "paillier_scheme1.h": "c"
     }
 }
