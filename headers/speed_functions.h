@@ -4,7 +4,6 @@
 #include <parameters.h>
 
 void reduced_moduli();
-void message_precomputation();
-void noise_precomputaion();
+int precomputation(unsigned char *file_name, struct Keychain *keychain);
 
 #endif

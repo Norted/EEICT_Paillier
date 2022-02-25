@@ -4,22 +4,10 @@
 #include <parameters.h>
 #include <paillier_scheme3.h>
 
-struct PrivateKey_scheme3 {
-    BIGNUM *p;
-    BIGNUM *q;
-    BIGNUM *alpha;
-    BIGNUM *mi;     // modular multiplicative inverse (L(g^alpha mod n^2))^(-1) mod n
-};
-
-struct Keychain_scheme3 {
-    struct PrivateKey_scheme3 sk;
-    struct PublicKey *pk;
-};
-
-unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring);
+unsigned int scheme3_generate_keypair(struct Keychain *keychain);
 unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain, BIGNUM *cipher);
-unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, BIGNUM *cipher, BIGNUM *plain);
-void scheme3_init_keychain(struct Keychain_scheme3 *keychain);
-void scheme3_free_keychain(struct Keychain_scheme3 *keychain);
+unsigned int scheme3_decrypt(struct Keychain *keychain, BIGNUM *cipher, BIGNUM *plain);
+void scheme3_init_keychain(struct Keychain *keychain);
+void scheme3_free_keychain(struct Keychain *keychain);
 
 #endif

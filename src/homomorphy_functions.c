@@ -44,14 +44,16 @@ unsigned int test_homomorphic_scheme1() {
     if(!ctx)
         return 0;
     
-    struct Keychain_scheme1 keyring1 = {{""}};
     unsigned int err = 0;
-    err += scheme1_generate_keypair(&keyring1);
+
+    struct Keychain keychain_1;
+    scheme1_init_keychain(&keychain_1);
+    err += scheme1_generate_keypair(&keychain_1);
 
     BIGNUM *message_1 = BN_new();
-    BN_dec2bn(message_1, "100");
+    BN_dec2bn(&message_1, "100");
     BIGNUM *message_2 = BN_new();
-    BN_dec2bn(message_2, "50");
+    BN_dec2bn(&message_2, "50");
     BIGNUM *message_sum = BN_new();
     err += BN_add(message_sum, message_1, message_2);
     BIGNUM *message_mul = BN_new();
@@ -64,19 +66,19 @@ unsigned int test_homomorphic_scheme1() {
     BN_free(message_mul);
 
     BIGNUM *cipher_1 = BN_new();
-    err += scheme1_encrypt(&keyring1.pk, message_1, cipher_1);
+    err += scheme1_encrypt(keychain_1.pk, message_1, cipher_1);
     BIGNUM *cipher_2 = BN_new();
-    err += scheme1_encrypt(&keyring1.pk, message_2, cipher_2);
+    err += scheme1_encrypt(keychain_1.pk, message_2, cipher_2);
 
     BIGNUM *cipher_sum_1 = BN_new();
     BIGNUM *dec_cipher_sum_1 = BN_new();
-    err += add(&keyring1.pk, cipher_1, cipher_2, cipher_sum_1);
-    err += scheme1_decrypt(&keyring1, cipher_sum_1, dec_cipher_sum_1);
+    err += add(keychain_1.pk, cipher_1, cipher_2, cipher_sum_1);
+    err += scheme1_decrypt(&keychain_1, cipher_sum_1, dec_cipher_sum_1);
 
     BIGNUM *cipher_sum_2 = BN_new();
     BIGNUM *dec_cipher_sum_2 = BN_new();
-    err += add_const(&keyring1.pk, cipher_1, message_2, cipher_sum_2);
-    err += scheme1_decrypt(&keyring1, cipher_sum_2, dec_cipher_sum_2);
+    err += add_const(keychain_1.pk, cipher_1, message_2, cipher_sum_2);
+    err += scheme1_decrypt(&keychain_1, cipher_sum_2, dec_cipher_sum_2);
 
     printf("CIPHER SUM 1: %s\nCIPHER SUM 2: %s\n", BN_bn2dec(dec_cipher_sum_1), BN_bn2dec(dec_cipher_sum_2));
 
@@ -89,14 +91,15 @@ unsigned int test_homomorphic_scheme1() {
 
     BIGNUM *cipher_mul = BN_new();
     BIGNUM *dec_cipher_mul = BN_new();
-    err += mul_const(&keyring1.pk, cipher_1, message_2, cipher_mul);
-    err += scheme1_decrypt(&keyring1, cipher_mul, dec_cipher_mul);
+    err += mul_const(keychain_1.pk, cipher_1, message_2, cipher_mul);
+    err += scheme1_decrypt(&keychain_1, cipher_mul, dec_cipher_mul);
 
     BN_free(cipher_mul);
     BN_free(dec_cipher_mul);
 
     printf("CIPHER MUL: %s\n", BN_bn2dec(dec_cipher_mul));
 
+    scheme1_free_keychain(&keychain_1);
     BN_CTX_free(ctx);
     if(err != 11)
         return 0;
@@ -108,14 +111,16 @@ unsigned int test_homomorphic_scheme3() {
     if(!ctx)
         return 0;
     
-    struct Keychain_scheme3 keyring3 = {{""}};
     unsigned int err = 0;
-    err += scheme3_generate_keypair(&keyring3);
+    
+    struct Keychain keychain_3;
+    scheme3_init_keychain(&keychain_3);
+    err += scheme3_generate_keypair(&keychain_3);
 
     BIGNUM *message_1 = BN_new();
-    BN_dec2bn(message_1, "100");
+    BN_dec2bn(&message_1, "100");
     BIGNUM *message_2 = BN_new();
-    BN_dec2bn(message_2, "50");
+    BN_dec2bn(&message_2, "50");
     BIGNUM *message_sum = BN_new();
     err += BN_add(message_sum, message_1, message_2);
     BIGNUM *message_mul = BN_new();
@@ -128,19 +133,19 @@ unsigned int test_homomorphic_scheme3() {
     BN_free(message_mul);
 
     BIGNUM *cipher_1 = BN_new();
-    err += scheme3_encrypt(&keyring3.pk, keyring3.sk.alpha, message_1, cipher_1);
+    err += scheme3_encrypt(keychain_3.pk, keychain_3.sk.l_or_a, message_1, cipher_1);
     BIGNUM *cipher_2 = BN_new();
-    err += scheme3_encrypt(&keyring3.pk, keyring3.sk.alpha, message_2, cipher_2);
+    err += scheme3_encrypt(keychain_3.pk, keychain_3.sk.l_or_a, message_2, cipher_2);
 
     BIGNUM *cipher_sum_1 = BN_new();
     BIGNUM *dec_cipher_sum_1 = BN_new();
-    err += add(&keyring3.pk, cipher_1, cipher_2, cipher_sum_1);
-    err += scheme3_decrypt(&keyring3, cipher_sum_1, dec_cipher_sum_1);
+    err += add(keychain_3.pk, cipher_1, cipher_2, cipher_sum_1);
+    err += scheme3_decrypt(&keychain_3, cipher_sum_1, dec_cipher_sum_1);
 
     BIGNUM *cipher_sum_2 = BN_new();
     BIGNUM *dec_cipher_sum_2 = BN_new();
-    err += add_const(&keyring3.pk, cipher_1, message_2, cipher_sum_2);
-    err += scheme3_decrypt(&keyring3, cipher_sum_2, dec_cipher_sum_2);
+    err += add_const(keychain_3.pk, cipher_1, message_2, cipher_sum_2);
+    err += scheme3_decrypt(&keychain_3, cipher_sum_2, dec_cipher_sum_2);
 
     printf("CIPHER SUM 1: %s\nCIPHER SUM 2: %s\n", BN_bn2dec(dec_cipher_sum_1), BN_bn2dec(dec_cipher_sum_2));
 
@@ -153,14 +158,15 @@ unsigned int test_homomorphic_scheme3() {
 
     BIGNUM *cipher_mul = BN_new();
     BIGNUM *dec_cipher_mul = BN_new();
-    err += mul_const(&keyring3.pk, cipher_1, message_2, cipher_mul);
-    err += scheme3_decrypt(&keyring3, cipher_mul, dec_cipher_mul);
+    err += mul_const(keychain_3.pk, cipher_1, message_2, cipher_mul);
+    err += scheme3_decrypt(&keychain_3, cipher_mul, dec_cipher_mul);
 
     BN_free(cipher_mul);
     BN_free(dec_cipher_mul);
 
     printf("CIPHER MUL: %s\n", BN_bn2dec(dec_cipher_mul));
 
+    scheme3_free_keychain(&keychain_3);
     BN_CTX_free(ctx);
     if(err != 11)
         return 0;

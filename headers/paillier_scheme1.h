@@ -3,22 +3,10 @@
 
 #include <parameters.h>
 
-struct PrivateKey_scheme1 {
-    BIGNUM *p;
-    BIGNUM *q;
-    BIGNUM *lambda;
-    BIGNUM *mi;     // modular multiplicative inverse (L(g^lambda mod n^2))^(-1) mod n
-};
-
-struct Keychain_scheme1 {
-    struct PrivateKey_scheme1 sk;
-    struct PublicKey *pk;
-};
-
-unsigned int scheme1_generate_keypair(struct Keychain_scheme1 *keyring);
+unsigned int scheme1_generate_keypair(struct Keychain *keychain);
 unsigned int scheme1_encrypt(struct PublicKey *pk, BIGNUM *plain, BIGNUM *cipher);
-unsigned int scheme1_decrypt(struct Keychain_scheme1 *keyring, BIGNUM *cipher, BIGNUM *plain);
-void scheme1_init_keychain(struct Keychain_scheme1 *keychain);
-void scheme1_free_keychain(struct Keychain_scheme1 *keychain);
+unsigned int scheme1_decrypt(struct Keychain *keychain, BIGNUM *cipher, BIGNUM *plain);
+void scheme1_init_keychain(struct Keychain *keychain);
+void scheme1_free_keychain(struct Keychain *keychain);
 
 #endif

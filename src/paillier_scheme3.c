@@ -1,99 +1,104 @@
 #include <paillier_scheme3.h>
 
-unsigned int _keyring_gen(struct Keychain_scheme3 *keyring);
+unsigned int _keychain_gen(struct Keychain *keychain);
 unsigned int _CRT_part(BIGNUM *prod, BIGNUM *n, BIGNUM *a, BIGNUM *res);
 
-unsigned int scheme3_generate_keypair(struct Keychain_scheme3 *keyring) {
+unsigned int scheme3_generate_keypair(struct Keychain *keychain) {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)
         return 0;
 
-    struct Keychain_scheme3 keyring1 = {{""}};
-    scheme3_init_keychain(&keyring1);
-    err += _keyring_gen(&keyring1);
+    struct Keychain keychain1 = {{""}};
+    scheme3_init_keychain(&keychain1);
+    err += _keychain_gen(&keychain1);
     if(err != 1) {
         BN_free(ctx);
-        scheme3_free_keychain(&keyring1);
+        scheme3_free_keychain(&keychain1);
         return 0;
     }
 
-    struct Keychain_scheme3 keyring2 = {{""}};
-    scheme3_init_keychain(&keyring2);
-    err += _keyring_gen(&keyring2);
+    struct Keychain keychain2 = {{""}};
+    scheme3_init_keychain(&keychain2);
+    err += _keychain_gen(&keychain2);
     if(err != 2) {
         BN_free(ctx);
-        scheme3_free_keychain(&keyring1);
-        scheme3_free_keychain(&keyring2);
+        scheme3_free_keychain(&keychain1);
+        scheme3_free_keychain(&keychain2);
         return 0;
     }
 
     BIGNUM *two = BN_new();
     BN_dec2bn(&two, "2");
 
-    BN_copy(keyring->sk.p, keyring1.sk.p);
-    BN_copy(keyring->sk.q, keyring2.sk.p);
-    err += BN_mul(keyring->pk->n, keyring->sk.p, keyring->sk.q, ctx);
-    err += BN_exp(keyring->pk->n_sq, keyring->pk->n, two, ctx);
+    BN_copy(keychain->sk.p, keychain1.sk.p);
+    BN_copy(keychain->sk.q, keychain2.sk.p);
+    err += BN_mul(keychain->pk->n, keychain->sk.p, keychain->sk.q, ctx);
+    err += BN_exp(keychain->pk->n_sq, keychain->pk->n, two, ctx);
 
     BIGNUM *lambda = BN_new();
-    err += l_or_a_computation(keyring->sk.p, keyring->sk.q, lambda);
+    err += l_or_a_computation(keychain->sk.p, keychain->sk.q, lambda);
 
     //Chinese Remainder Theorem
         BIGNUM *p_sq = BN_new();
         BIGNUM *q_sq = BN_new();
-        err += BN_exp(p_sq, keyring->sk.p, two, ctx);
-        err += BN_exp(q_sq, keyring->sk.q, two, ctx);
+        err += BN_exp(p_sq, keychain->sk.p, two, ctx);
+        err += BN_exp(q_sq, keychain->sk.q, two, ctx);
         
         BIGNUM *num[] = {p_sq, q_sq};
-        BIGNUM *rem[] = {keyring1.pk->g, keyring2.pk->g};
+        BIGNUM *rem[] = {keychain1.pk->g, keychain2.pk->g};
         int size = sizeof(num) / sizeof(num[0]);
-        err += chinese_remainder_theorem(num, rem, size, keyring->pk->g);
+        err += chinese_remainder_theorem(num, rem, size, keychain->pk->g);
     //
     BN_free(two);
     BN_free(p_sq);
     BN_free(q_sq);
 
-    err += BN_mul(keyring->sk.alpha, keyring1.sk.q, keyring2.sk.q, ctx);
+    err += BN_mul(keychain->sk.l_or_a, keychain1.sk.q, keychain2.sk.q, ctx);
     
-    // Check if alpha is divisor of lambda
+    // Check if l_or_a is divisor of lambda
     BIGNUM *chck = BN_new();
-    err += BN_mod(chck, lambda, keyring->sk.alpha, ctx);
+    err += BN_mod(chck, lambda, keychain->sk.l_or_a, ctx);
     if(BN_is_zero(chck) == 0) {
         BN_free(chck);
         BN_free(lambda);
-        scheme3_free_keychain(&keyring1);
-        scheme3_free_keychain(&keyring2);
+        scheme3_free_keychain(&keychain1);
+        scheme3_free_keychain(&keychain2);
         return 0;
     }
     BN_free(lambda);
 
-    // Check if g is the order of alpha*n in Z*_nsquared
-    BIGNUM *alpha_mul_n = BN_new();
-    err += BN_mul(alpha_mul_n, keyring->sk.alpha, keyring->pk->n, ctx);
-    err += BN_mod_exp(chck, keyring->pk->g, alpha_mul_n, keyring->pk->n_sq, ctx);
+    // TODO: Compute g^n !!!  --> FIX
+    // Check if g is the order of l_or_a*n in Z*_nsquared
+    BIGNUM *l_or_a_mul_n = BN_new();
+    err += BN_mul(l_or_a_mul_n, keychain->sk.l_or_a, keychain->pk->n, ctx);
+    err += BN_mod_exp(chck, keychain->pk->g, l_or_a_mul_n, keychain->pk->n_sq, ctx);
     if(BN_is_one(chck) == 0) {
         BN_free(chck);
-        BN_free(alpha_mul_n);
-        scheme3_free_keychain(&keyring1);
-        scheme3_free_keychain(&keyring2);
+        BN_free(l_or_a_mul_n);
+        scheme3_free_keychain(&keychain1);
+        scheme3_free_keychain(&keychain2);
         return 0;
     }
     BN_free(chck);
-    BN_free(alpha_mul_n);
+    BN_free(l_or_a_mul_n);
     
-    err += count_mi(keyring->sk.mi, keyring->pk->g, keyring->sk.alpha, keyring->pk->n_sq, keyring->pk->n);
+    err += BN_mod_exp(keychain->pk->g2n, keychain->pk->g, keychain->pk->n, keychain->pk->n_sq, ctx);
+    err += count_mi(keychain->sk.mi, keychain->pk->g, keychain->sk.l_or_a, keychain->pk->n_sq, keychain->pk->n);
 
     BN_CTX_free(ctx);
-    scheme3_free_keychain(&keyring1);
-    scheme3_free_keychain(&keyring2);
+    scheme3_free_keychain(&keychain1);
+    scheme3_free_keychain(&keychain2);
 
-    if(err != 16)
+    if(err != 14)
         return 0;
     return 1;
 }
 
-unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain, BIGNUM *cipher) {
+unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain, BIGNUM *cipher) {
+    clock_t start, end;
+    double consumed_time = 0;
+    
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)
         return 0;
@@ -101,32 +106,39 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain,
     if(BN_cmp(plain, pk->n) != -1)
         return 0;
     
-    unsigned int stop = 0;
     unsigned int err = 0;
+    unsigned int i = 0;
     BIGNUM *rnd = BN_new();
-    BIGNUM *gcd = BN_new();
+    BIGNUM *tmp_gcd = BN_new();
 
-    while (stop < MAXITER) { // FIX ME!!!
-        err += BN_rand_range_ex(rnd, alpha, NULL, ctx);
-        err += BN_gcd(gcd, rnd, alpha, ctx);
-        if (BN_is_one(gcd) == 1 && BN_is_zero(rnd) == 0 && BN_cmp(rnd, alpha) == -1 && err == 2)
+    for(i; i < MAXITER; i++) {
+        err += BN_rand_range_ex(rnd, l_or_a, NULL, ctx);
+        err += BN_gcd(tmp_gcd, rnd, l_or_a, ctx);
+        if (BN_is_one(tmp_gcd) == 1 && BN_is_zero(rnd) == 0 && BN_cmp(rnd, l_or_a) == -1 && err == 2)
             break;
-        stop ++;
         err -= 2;
     }
-
-    BN_free(gcd);
+    BN_free(tmp_gcd);
         
-    if(BN_is_zero(rnd) == 1 || stop == MAXITER) {
-        printf("\n\t!!!!! EXCEPTION !!!!!\n\n");
+    if(BN_is_zero(rnd) == 1 || i == MAXITER) {
+        printf("\tRND fail\t");
         return 0;
     }
 
-    BIGNUM *c_1 = BN_new();
-    err += BN_mod_exp(c_1, pk->g, plain, pk->n_sq, ctx);
-    BIGNUM *c_2 = BN_new();
-    err += BN_mod_exp(c_2, pk->g, pk->n, pk->n_sq, ctx);
-    err += BN_mod_exp(c_2, c_2, rnd, pk->n_sq, ctx);
+    // SLOW CODE!!!
+        start = clock();
+        BIGNUM *c_1 = BN_new();
+        err += BN_mod_exp(c_1, pk->g, plain, pk->n_sq, ctx);
+        end = clock();
+        consumed_time = difftime(end, start);
+
+        start = clock();    // BOTTLENECK!!!
+        BIGNUM *c_2 = BN_new();
+        err += BN_mod_exp(c_2, pk->g2n, rnd, pk->n_sq, ctx);
+        end = clock();
+        consumed_time = difftime(end, start);
+    //
+    
     err += BN_mod_mul(cipher, c_1, c_2, pk->n_sq, ctx);
 
     BN_free(rnd);
@@ -140,7 +152,7 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *alpha, BIGNUM *plain,
     return 1;
 }
 
-unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, BIGNUM *cipher, BIGNUM *plain) {
+unsigned int scheme3_decrypt(struct Keychain *keychain, BIGNUM *cipher, BIGNUM *plain) {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)
@@ -148,9 +160,9 @@ unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, BIGNUM *cipher, B
     
     BIGNUM *u = BN_new();
 
-    err += BN_mod_exp(u, cipher, keyring->sk.alpha, keyring->pk->n_sq, ctx);
-    err += L(u, keyring->pk->n, u);
-    err += BN_mod_mul(plain, u, keyring->sk.mi, keyring->pk->n, ctx);
+    err += BN_mod_exp(u, cipher, keychain->sk.l_or_a, keychain->pk->n_sq, ctx);
+    err += L(u, keychain->pk->n, u, ctx);
+    err += BN_mod_mul(plain, u, keychain->sk.mi, keychain->pk->n, ctx);
 
     BN_free(u);
 
@@ -160,12 +172,13 @@ unsigned int scheme3_decrypt(struct Keychain_scheme3 *keyring, BIGNUM *cipher, B
     return 1;
 }
 
-void scheme3_init_keychain(struct Keychain_scheme3 *keychain) {
+void scheme3_init_keychain(struct Keychain *keychain) {
     keychain->pk = malloc(sizeof(struct PublicKey));
     keychain->pk->g = BN_new();
     keychain->pk->n = BN_new();
+    keychain->pk->g2n = BN_new();
     keychain->pk->n_sq = BN_new();
-    keychain->sk.alpha = BN_new();
+    keychain->sk.l_or_a = BN_new();
     keychain->sk.mi = BN_new();
     keychain->sk.p = BN_new();
     keychain->sk.q = BN_new();
@@ -173,12 +186,13 @@ void scheme3_init_keychain(struct Keychain_scheme3 *keychain) {
     return;
 }
 
-void scheme3_free_keychain(struct Keychain_scheme3 *keychain) {
+void scheme3_free_keychain(struct Keychain *keychain) {
     BN_free(keychain->pk->g);
     BN_free(keychain->pk->n);
+    BN_free(keychain->pk->g2n);
     BN_free(keychain->pk->n_sq);
     free(keychain->pk);
-    BN_free(keychain->sk.alpha);
+    BN_free(keychain->sk.l_or_a);
     BN_free(keychain->sk.mi);
     BN_free(keychain->sk.p);
     BN_free(keychain->sk.q);
@@ -187,7 +201,7 @@ void scheme3_free_keychain(struct Keychain_scheme3 *keychain) {
 }
 
 // Support functions
-unsigned int _keyring_gen(struct Keychain_scheme3 *keyring) {
+unsigned int _keychain_gen(struct Keychain *keychain) {
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if(!ctx)
@@ -196,14 +210,14 @@ unsigned int _keyring_gen(struct Keychain_scheme3 *keyring) {
     BIGNUM *two = BN_new();
     BN_dec2bn(&two, "2");
     
-    err += gen_DSA_params(keyring->sk.p, keyring->sk.q, keyring->pk->g);
-    err += BN_mul(keyring->pk->n, keyring->sk.p, keyring->sk.q, ctx);
-    err += BN_exp(keyring->pk->n_sq, keyring->pk->n, two, ctx);
+    err += gen_DSA_params(keychain->sk.p, keychain->sk.q, keychain->pk->g);
+    err += BN_mul(keychain->pk->n, keychain->sk.p, keychain->sk.q, ctx);
+    err += BN_exp(keychain->pk->n_sq, keychain->pk->n, two, ctx);
 
     BIGNUM *p_sq = BN_new();
     BIGNUM *mod = BN_new();
-    err += BN_exp(p_sq, keyring->sk.p, two, ctx);
-    err += BN_mod_exp(mod, keyring->pk->g, keyring->pk->n, p_sq, ctx);
+    err += BN_exp(p_sq, keychain->sk.p, two, ctx);
+    err += BN_mod_exp(mod, keychain->pk->g, keychain->pk->n, p_sq, ctx);
 
     BN_free(p_sq);
     BN_free(two);

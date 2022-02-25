@@ -13,5 +13,16 @@
         "parameters.h": "c",
         "*.tcc": "c",
         "algorithm": "c",
+        "array": "c",
+        "string_view": "c",
+        "initializer_list": "c",
+        "utility": "c",
+        "functional": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "system_error": "c",
+        "tuple": "c",
+        "type_traits": "c"
     }
 }

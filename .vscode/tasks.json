@@ -15,6 +15,7 @@
                 "${workspaceFolder}/src/speed_functions.c",
                 "${workspaceFolder}/src/homomorphy_functions.c",
                 "${workspaceFolder}/main.c",
+                "-lpthread",
                 "-lssl",
                 "-lcrypto",
                 "-o",
