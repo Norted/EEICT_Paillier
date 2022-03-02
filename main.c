@@ -46,7 +46,6 @@ unsigned int run_all();
 int scheme1(const char *restrict result_file_name, unsigned int cheat_message, unsigned int cheat_random);
 int scheme3(const char *restrict result_file_name, unsigned int cheat_message, unsigned int cheat_random);
 
-
 // MAIN
 int main()
 {
@@ -83,8 +82,8 @@ int main()
     // type 1 ... message, 2 ... noise, 3 ... noise scheme 3
     /* err = precomputation(file_name_scheme1_noise, &keychain_1, RANGE, 2);
     err = precomputation(file_name_scheme1_message, &keychain_1, RANGE, 1);
-    err = precomputation(file_name_scheme3_noise, &keychain_3, RANGE, 2);
-    err = precomputation(file_name_scheme3_message, &keychain_3, RANGE, 3); */
+    err = precomputation(file_name_scheme3_noise, &keychain_3, RANGE, 3);
+    err = precomputation(file_name_scheme3_message, &keychain_3, RANGE, 1); */
 
     json_1_noise = parse_JSON(file_name_scheme1_noise);
     json_1_message = parse_JSON(file_name_scheme1_message);
@@ -261,15 +260,17 @@ int scheme1(const char *restrict result_file_name, unsigned int cheat_message, u
             printf("\t * Printing to file failed!\n");
             goto end;
         }
-        
+
         err = 0;
         if (cheat_random == 1)
         {
-            err = generate_rnd(range, keychain_1.pk->n, rnd, BITS/2);
-            err = find_value(json_1_noise, rnd, precomp_noise);
-            if(err != 1)
+            err = generate_rnd(range, keychain_1.pk->n, rnd, BITS / 2);
+            if (err != 1)
                 goto end;
-            //printf("R: %s\nP: %s\n", BN_bn2dec(rnd), BN_bn2dec(precomp_noise));
+            err = find_value(json_1_noise, rnd, precomp_noise);
+            if (err != 1)
+                goto end;
+            // printf("R: %s\nP: %s\n", BN_bn2dec(rnd), BN_bn2dec(precomp_noise));
         }
         else
         {
@@ -278,9 +279,11 @@ int scheme1(const char *restrict result_file_name, unsigned int cheat_message, u
 
         if (cheat_message == 1)
         {
-            err = generate_rnd(range, BN_value_one(), message, BITS/2);
+            err = generate_rnd(range, BN_value_one(), message, BITS / 2);
+            if (err != 1)
+                goto end;
             err = find_value(json_1_message, message, precomp_message);
-            if(err != 1)
+            if (err != 1)
                 goto end;
         }
         else
@@ -292,7 +295,7 @@ int scheme1(const char *restrict result_file_name, unsigned int cheat_message, u
         err = scheme1_encrypt(keychain_1.pk, message, enc, precomp_message, precomp_noise);
         end = clock();
         consumed_time = difftime(end, start);
-        if(err != 1)
+        if (err != 1)
         {
             printf("\t * Scheme 1 encryption failed (main)!\n");
             goto end;
@@ -308,7 +311,7 @@ int scheme1(const char *restrict result_file_name, unsigned int cheat_message, u
         err = scheme1_decrypt(&keychain_1, enc, dec);
         end = clock();
         consumed_time = difftime(end, start);
-        if(err != 1)
+        if (err != 1)
         {
             printf("\t * Scheme 1 decryption failed (main)!\n");
             goto end;
@@ -327,7 +330,7 @@ int scheme1(const char *restrict result_file_name, unsigned int cheat_message, u
             goto end;
         }
 
-        printf("M: %s\nD: %s\n", BN_bn2dec(message), BN_bn2dec(dec));
+        // printf("M: %s\nD: %s\n", BN_bn2dec(message), BN_bn2dec(dec));
         if (BN_cmp(message, dec) != 0)
         {
             printf("\t * OPERATION FAILED!\n");
@@ -341,12 +344,12 @@ end:
     BN_free(rnd);
     BN_free(precomp_message);
     BN_free(precomp_noise);
-    //BN_CTX_free(ctx);
+    // BN_CTX_free(ctx);
 
     return fclose(file);
 }
 
-int scheme3(const char * restrict result_file_name, unsigned int cheat_message, unsigned int cheat_random)
+int scheme3(const char *restrict result_file_name, unsigned int cheat_message, unsigned int cheat_random)
 {
     int printer = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
@@ -387,8 +390,13 @@ int scheme3(const char * restrict result_file_name, unsigned int cheat_message, 
         err = 0;
         if (cheat_random == 1)
         {
-            err = generate_rnd(range, keychain_1.sk.l_or_a, rnd, BITS/2);
+            err = generate_rnd(range, keychain_1.sk.l_or_a, rnd, BITS / 2);
+            if (err != 1)
+                goto end;
             err = find_value(json_3_noise, rnd, precomp_noise);
+            if (err != 1)
+                goto end;
+            // printf("R: %s\nP: %s\n", BN_bn2dec(rnd), BN_bn2dec(precomp_noise));
         }
         else
         {
@@ -397,14 +405,18 @@ int scheme3(const char * restrict result_file_name, unsigned int cheat_message, 
 
         if (cheat_message == 1)
         {
-            err = generate_rnd(range, BN_value_one(), message, BITS/2);
+            err = generate_rnd(range, BN_value_one(), message, BITS / 2);
+            if (err != 1)
+                goto end;
             err = find_value(json_3_message, message, precomp_message);
+            if (err != 1)
+                goto end;
         }
         else
         {
             BN_dec2bn(&precomp_message, "0");
         }
-        
+
         start = clock();
         err += scheme3_encrypt(keychain_3.pk, keychain_3.sk.l_or_a, message, enc, precomp_message, precomp_noise);
         end = clock();
@@ -434,7 +446,7 @@ int scheme3(const char * restrict result_file_name, unsigned int cheat_message, 
             goto end;
         }
 
-        printf("M: %s\nD: %s\n", BN_bn2dec(message), BN_bn2dec(dec));
+        // printf("M: %s\nD: %s\n", BN_bn2dec(message), BN_bn2dec(dec));
         if (BN_cmp(message, dec) != 0)
         {
             printf("\t * OPERATION FAILED!\n");
@@ -456,29 +468,78 @@ end:
 unsigned int run_all()
 {
     err = 0;
+    
+    printf("\t * Scheme 1 started ...\t");
     err = scheme1("scheme_1.csv", 0, 0);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 1 failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 3 started ...\t");
     err = scheme3("scheme_3.csv", 0, 0);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 1 failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 1 random started ...\t");
     err = scheme1("scheme_1_rnd.csv", 0, 1);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 1 random failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 3 random started ...\t");
     err = scheme3("scheme_3_rnd.csv", 0, 1);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 1 random failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 1 message started ...\t");
     err = scheme1("scheme_1_msg.csv", 1, 0);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 1 message failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 3 message started ...\t");
     err = scheme3("scheme_3_msg.csv", 1, 0);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 3 message failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 1 both started ...\t");
     err = scheme1("scheme_1_both.csv", 1, 1);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 1 both failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
+    printf("\t * Scheme 3 both started ...\t");
     err = scheme3("scheme_3_both.csv", 1, 1);
-    if (err != 1)
+    if (err != 0)
+    {
+        printf("\t * Scheme 3 both failed!\n");
         return 0;
+    }
+    printf("DONE!\n");
+
     return 1;
 }
