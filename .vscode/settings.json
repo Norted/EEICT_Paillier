@@ -10,6 +10,7 @@
         "homomorphy_functions.h": "c",
         "paillier_scheme1.h": "c",
         "paillier_scheme3.h": "c",
+        "tests.h": "c",
         "parameters.h": "c",
         "*.tcc": "c",
         "algorithm": "c",
@@ -23,6 +24,8 @@
         "ostream": "c",
         "system_error": "c",
         "tuple": "c",
-        "type_traits": "c"
+        "type_traits": "c",
+        "cjson.h": "c",
+        "numeric": "c"
     }
 }

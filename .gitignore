@@ -1,5 +1,12 @@
 # Compiled code
 main
+cJSON
+
+# JSON files
+*.json
+
+# result *.csv files
+*.csv
 
 # Prerequisites
 *.d

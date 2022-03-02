@@ -28,16 +28,11 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicK
             break;
         err -= 7;
     }
-    BN_free(p_sub);
-    BN_free(q_sub);
-    BN_free(pq_sub);
 
     if (i == MAXITER)
     {
-        printf("MAXITER! P, Q not generated!\n");
-        BN_free(tmp_gcd);
-        BN_CTX_free(ctx);
-        return 0;
+        printf("\t * MAXITER! P, Q not generated!\n");
+        goto end;
     }
 
     const BIGNUM *two = BN_new();
@@ -46,7 +41,7 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicK
     BN_free(two);
 
     err += l_or_a_computation(p, q, l_or_a);
-    
+
     BN_dec2bn(&pk->g2n, "0");
 
     i = 0;
@@ -72,13 +67,19 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicK
         }
         err -= 5;
     }
+
+end:
+    BN_free(p_sub);
+    BN_free(q_sub);
+    BN_free(pq_sub);
     BN_free(tmp_g);
     BN_free(tmp_gcd);
     BN_free(tmp_u);
+    BN_CTX_free(ctx);
 
     if (i == MAXITER)
     {
-        printf("MAXITER! G not found!\n");
+        printf("\t * MAXITER! G not found!\n");
         return 0;
     }
 
@@ -120,24 +121,20 @@ unsigned int lcm(BIGNUM *a, BIGNUM *b, BIGNUM *res)
     err = BN_mul(bn_mul, a, b, ctx);
     if (err == 0)
     {
-        BN_free(bn_mul);
-        BN_CTX_free(ctx);
-        return err;
+        goto end;
     }
 
     BIGNUM *bn_gcd = BN_new();
     err = BN_gcd(bn_gcd, a, b, ctx);
     if (err == 0)
     {
-        BN_free(bn_mul);
-        BN_free(bn_gcd);
-        BN_CTX_free(ctx);
-        return err;
+        goto end;
     }
 
     BIGNUM *bn_rem = BN_new();
     err = BN_div(res, bn_rem, bn_mul, bn_gcd, ctx);
 
+end:
     BN_free(bn_mul);
     BN_free(bn_gcd);
     BN_free(bn_rem);
@@ -151,30 +148,30 @@ unsigned int count_mi(BIGNUM *mi, BIGNUM *g, BIGNUM *l_or_a, BIGNUM *n_sq, BIGNU
     unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
+    {
+        printf("\t * Failed to generate CTX!\n");
         return 0;
+    }
 
     BIGNUM *u = BN_new();
 
     err = BN_mod_exp(u, g, l_or_a, n_sq, ctx);
     if (err == 0)
     {
-        BN_free(u);
-        BN_CTX_free(ctx);
-        return err;
+        goto end;
     }
 
     err = L(u, n, u, ctx);
     if (err == 0)
     {
-        BN_free(u);
-        BN_CTX_free(ctx);
-        return err;
+        goto end;
     }
 
     BIGNUM *inv = BN_new();
     BN_mod_inverse(inv, u, n, ctx);
     BN_copy(mi, inv);
 
+end:
     BN_free(u);
     BN_free(inv);
     BN_CTX_free(ctx);
@@ -191,19 +188,17 @@ unsigned int L(BIGNUM *u, BIGNUM *n, BIGNUM *res, BN_CTX *ctx)
     err = BN_sub(u, u, BN_value_one());
     if (err == 0)
     {
-        BN_CTX_free(ctx);
-        return err;
+        goto end;
     }
 
     BIGNUM *rem = BN_new();
     err = BN_div(res, rem, u, n, ctx);
     if (err == 0)
     {
-        BN_free(rem);
-        BN_CTX_free(ctx);
-        return err;
+        goto end;
     }
 
+end:
     BN_free(rem);
 
     return err;
@@ -222,6 +217,36 @@ unsigned int l_or_a_computation(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a)
     BN_free(q_sub);
 
     if (err != 3)
+        return 0;
+    return 1;
+}
+
+unsigned int generate_rnd(BIGNUM *range, BIGNUM *gcd_chck, BIGNUM *random, unsigned int strength)
+{
+    unsigned int err = 0;
+    BN_CTX *ctx = BN_CTX_secure_new();
+    if(!ctx)
+    {
+        printf("\t * Failed to generate CTX!\n");
+        return 0;
+    }
+
+    BIGNUM *tmp_gcd = BN_new();
+    int i = 0;
+    for(i; i < MAXITER; i++) {
+        err += BN_rand_range_ex(random, range, strength, ctx);
+        err += BN_gcd(tmp_gcd, random, gcd_chck, ctx);
+        if (BN_is_one(tmp_gcd) == 1 && BN_is_zero(random) == 0 && BN_cmp(random, range) == -1 && err == 2)
+            break;
+        err -= 2;
+    }
+        
+    if(BN_is_zero(random) == 1 || i == MAXITER) {
+        printf("\tRND fail\tRND: %s, I: %d\n", BN_bn2dec(random), i);
+        return 0;
+    }
+
+    if(err != 2)
         return 0;
     return 1;
 }
@@ -264,4 +289,126 @@ unsigned int chinese_remainder_theorem(BIGNUM *num[], BIGNUM *rem[], int size, B
     if (err != (unsigned int)(5 * size) + 1)
         return 0;
     return 1;
+}
+
+void init_keychain(struct Keychain *keychain) {
+    keychain->pk = malloc(sizeof(struct PublicKey));
+    keychain->pk->g = BN_new();
+    keychain->pk->n = BN_new();
+    keychain->pk->g2n = BN_new();
+    keychain->pk->n_sq = BN_new();
+    keychain->sk.l_or_a = BN_new();
+    keychain->sk.mi = BN_new();
+    keychain->sk.p = BN_new();
+    keychain->sk.q = BN_new();
+
+    return;
+}
+
+void free_keychain(struct Keychain *keychain) {
+    BN_free(keychain->pk->g);
+    BN_free(keychain->pk->n);
+    BN_free(keychain->pk->g2n);
+    BN_free(keychain->pk->n_sq);
+    free(keychain->pk);
+    BN_free(keychain->sk.l_or_a);
+    BN_free(keychain->sk.mi);
+    BN_free(keychain->sk.p);
+    BN_free(keychain->sk.q);
+
+    return;
+}
+
+cJSON *parse_JSON(const char *restrict file_name)
+{
+    cJSON *json = cJSON_CreateObject();
+    FILE *file = fopen(file_name, "r");
+    if (file == NULL)
+    {
+        printf("\t * Opening the file %s failed!\n", file_name);
+        return NULL;
+    }
+
+    fseek(file, 0L, SEEK_END);
+    long fileSize = ftell(file);
+    // printf("\t * File size: %lu\n", fileSize);
+    fseek(file, 0, SEEK_SET);
+
+    char *jsonStr = (char *)malloc(sizeof(char) * fileSize + 1); // Allocate memory that matches the file size
+    memset(jsonStr, 0, fileSize + 1);
+
+    int size = fread(jsonStr, sizeof(char), fileSize, file); // Read json string in file
+    if (size == 0)
+    {
+        printf("\t * Failed to read the file %s!\n", file_name);
+        fclose(file);
+        return 0;
+    }
+    // printf("%s", jsonStr);
+
+    json = cJSON_Parse(jsonStr);
+    if (json == NULL)
+    {
+        const char *error_ptr = cJSON_GetErrorPtr();
+        if (error_ptr != NULL)
+        {
+            printf("\t * Error before: %s\n", error_ptr);
+        }
+    }
+
+    /* unsigned char *str = NULL;
+    str = cJSON_Print(json);
+    printf("%s\n", str); */
+
+    fclose(file);
+    return json;
+}
+
+unsigned int find_value(cJSON *json, BIGNUM *search, BIGNUM *result)
+{
+    unsigned int err = 0;
+    cJSON *values = NULL;
+    cJSON *value = NULL;
+    unsigned char *str = NULL;
+    unsigned char *search_str = BN_bn2dec(search);
+    values = cJSON_GetObjectItemCaseSensitive(json, "precomputed_values");
+    cJSON_ArrayForEach(value, values)
+    {
+        str = cJSON_GetObjectItemCaseSensitive(value, "exp")->valuestring;
+        if (strcmp(search_str, str) == 0)
+        {
+            BN_dec2bn(&result, cJSON_GetObjectItemCaseSensitive(value, "result")->valuestring);
+            err = 1;
+            break;
+        }
+    }
+    return err;
+}
+
+void read_keys(const char * restrict file_name, struct Keychain *keychain)
+{
+    unsigned int err = 0;
+    cJSON *json = cJSON_CreateObject();
+    json = parse_JSON(file_name);
+
+    cJSON *keys = NULL;
+    cJSON *pk = NULL;
+    cJSON *sk = NULL;
+    cJSON *value = NULL;
+    keys = cJSON_GetObjectItemCaseSensitive(json, "keys");
+    pk = cJSON_GetObjectItemCaseSensitive(keys, "pk");
+    sk = cJSON_GetObjectItemCaseSensitive(keys, "sk");
+    
+    BN_dec2bn(&keychain->pk->g2n, cJSON_GetObjectItemCaseSensitive(pk, "g2n")->valuestring);
+    BN_dec2bn(&keychain->pk->g, cJSON_GetObjectItemCaseSensitive(pk, "g")->valuestring);
+    BN_dec2bn(&keychain->pk->n, cJSON_GetObjectItemCaseSensitive(pk, "n")->valuestring);
+    BN_dec2bn(&keychain->pk->n_sq, cJSON_GetObjectItemCaseSensitive(pk, "n_sq")->valuestring);
+
+    BN_dec2bn(&keychain->sk.l_or_a, cJSON_GetObjectItemCaseSensitive(sk, "l_or_a")->valuestring);
+    BN_dec2bn(&keychain->sk.mi, cJSON_GetObjectItemCaseSensitive(sk, "mi")->valuestring);
+    BN_dec2bn(&keychain->sk.p, cJSON_GetObjectItemCaseSensitive(sk, "p")->valuestring);
+    BN_dec2bn(&keychain->sk.q, cJSON_GetObjectItemCaseSensitive(sk, "q")->valuestring);
+
+    cJSON_free(json);
+    return;
 }

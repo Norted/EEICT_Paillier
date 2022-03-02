@@ -10,21 +10,21 @@ unsigned int scheme3_generate_keypair(struct Keychain *keychain) {
         return 0;
 
     struct Keychain keychain1 = {{""}};
-    scheme3_init_keychain(&keychain1);
+    init_keychain(&keychain1);
     err += _keychain_gen(&keychain1);
     if(err != 1) {
         BN_free(ctx);
-        scheme3_free_keychain(&keychain1);
+        free_keychain(&keychain1);
         return 0;
     }
 
     struct Keychain keychain2 = {{""}};
-    scheme3_init_keychain(&keychain2);
+    init_keychain(&keychain2);
     err += _keychain_gen(&keychain2);
     if(err != 2) {
         BN_free(ctx);
-        scheme3_free_keychain(&keychain1);
-        scheme3_free_keychain(&keychain2);
+        free_keychain(&keychain1);
+        free_keychain(&keychain2);
         return 0;
     }
 
@@ -62,13 +62,12 @@ unsigned int scheme3_generate_keypair(struct Keychain *keychain) {
     if(BN_is_zero(chck) == 0) {
         BN_free(chck);
         BN_free(lambda);
-        scheme3_free_keychain(&keychain1);
-        scheme3_free_keychain(&keychain2);
+        free_keychain(&keychain1);
+        free_keychain(&keychain2);
         return 0;
     }
     BN_free(lambda);
 
-    // TODO: Compute g^n !!!  --> FIX
     // Check if g is the order of l_or_a*n in Z*_nsquared
     BIGNUM *l_or_a_mul_n = BN_new();
     err += BN_mul(l_or_a_mul_n, keychain->sk.l_or_a, keychain->pk->n, ctx);
@@ -76,8 +75,8 @@ unsigned int scheme3_generate_keypair(struct Keychain *keychain) {
     if(BN_is_one(chck) == 0) {
         BN_free(chck);
         BN_free(l_or_a_mul_n);
-        scheme3_free_keychain(&keychain1);
-        scheme3_free_keychain(&keychain2);
+        free_keychain(&keychain1);
+        free_keychain(&keychain2);
         return 0;
     }
     BN_free(chck);
@@ -87,15 +86,15 @@ unsigned int scheme3_generate_keypair(struct Keychain *keychain) {
     err += count_mi(keychain->sk.mi, keychain->pk->g, keychain->sk.l_or_a, keychain->pk->n_sq, keychain->pk->n);
 
     BN_CTX_free(ctx);
-    scheme3_free_keychain(&keychain1);
-    scheme3_free_keychain(&keychain2);
+    free_keychain(&keychain1);
+    free_keychain(&keychain2);
 
     if(err != 14)
         return 0;
     return 1;
 }
 
-unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain, BIGNUM *cipher) {
+unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain, BIGNUM *cipher, BIGNUM *precomp_message, BIGNUM *precomp_noise) {
     clock_t start, end;
     double consumed_time = 0;
     
@@ -107,46 +106,34 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain
         return 0;
     
     unsigned int err = 0;
-    unsigned int i = 0;
-    BIGNUM *rnd = BN_new();
-    BIGNUM *tmp_gcd = BN_new();
+    BIGNUM *tmp_rnd = BN_new();
 
-    for(i; i < MAXITER; i++) {
-        err += BN_rand_range_ex(rnd, l_or_a, NULL, ctx);
-        err += BN_gcd(tmp_gcd, rnd, l_or_a, ctx);
-        if (BN_is_one(tmp_gcd) == 1 && BN_is_zero(rnd) == 0 && BN_cmp(rnd, l_or_a) == -1 && err == 2)
-            break;
-        err -= 2;
-    }
-    BN_free(tmp_gcd);
-        
-    if(BN_is_zero(rnd) == 1 || i == MAXITER) {
-        printf("\tRND fail\t");
-        return 0;
-    }
-
+    // FIX ME!!!
     // SLOW CODE!!!
-        start = clock();
-        BIGNUM *c_1 = BN_new();
-        err += BN_mod_exp(c_1, pk->g, plain, pk->n_sq, ctx);
-        end = clock();
-        consumed_time = difftime(end, start);
-
-        start = clock();    // BOTTLENECK!!!
-        BIGNUM *c_2 = BN_new();
-        err += BN_mod_exp(c_2, pk->g2n, rnd, pk->n_sq, ctx);
-        end = clock();
-        consumed_time = difftime(end, start);
+        if (BN_is_zero(precomp_message) == 1)
+            err += BN_mod_exp(precomp_message, pk->g, plain, pk->n_sq, ctx);
+        else
+        {
+            err += 1;
+        }
+        
+        if (BN_is_zero(precomp_noise) == 1)
+        {
+            err += generate_rnd(l_or_a, l_or_a, tmp_rnd, BITS/2);
+            err += BN_mod_exp(precomp_noise, pk->g2n, tmp_rnd, pk->n_sq, ctx);    // BOTTLENECK!!!
+        }
+        else
+        {
+            err += 2;
+        }
     //
     
-    err += BN_mod_mul(cipher, c_1, c_2, pk->n_sq, ctx);
+    err += BN_mod_mul(cipher, precomp_message, precomp_noise, pk->n_sq, ctx);
 
-    BN_free(rnd);
-    BN_free(c_1);
-    BN_free(c_2);
     BN_CTX_free(ctx);
+    BN_free(tmp_rnd);
 
-    if(err != 6)
+    if(err != 4)
         return 0;
     
     return 1;
@@ -170,34 +157,6 @@ unsigned int scheme3_decrypt(struct Keychain *keychain, BIGNUM *cipher, BIGNUM *
         return 0;
     
     return 1;
-}
-
-void scheme3_init_keychain(struct Keychain *keychain) {
-    keychain->pk = malloc(sizeof(struct PublicKey));
-    keychain->pk->g = BN_new();
-    keychain->pk->n = BN_new();
-    keychain->pk->g2n = BN_new();
-    keychain->pk->n_sq = BN_new();
-    keychain->sk.l_or_a = BN_new();
-    keychain->sk.mi = BN_new();
-    keychain->sk.p = BN_new();
-    keychain->sk.q = BN_new();
-
-    return;
-}
-
-void scheme3_free_keychain(struct Keychain *keychain) {
-    BN_free(keychain->pk->g);
-    BN_free(keychain->pk->n);
-    BN_free(keychain->pk->g2n);
-    BN_free(keychain->pk->n_sq);
-    free(keychain->pk);
-    BN_free(keychain->sk.l_or_a);
-    BN_free(keychain->sk.mi);
-    BN_free(keychain->sk.p);
-    BN_free(keychain->sk.q);
-
-    return;
 }
 
 // Support functions

@@ -12,18 +12,18 @@
 #include <openssl/dsa.h>
 #include <openssl/rand.h>
 #include <openssl/err.h>
+#include <cjson/cJSON.h>
 #include <support_functions.h>
 #include <paillier_scheme1.h>
 #include <paillier_scheme3.h>
 #include <homomorphy_functions.h>
 
-#define NUM_THREADS 2
-#define BUFFER 1024
+#define NUM_THREADS 2   //
+#define BUFFER 512      // 512, 1024
 #define BITS 512        // 512, 1024, 1500, 2048
-#define BITS_STR "1024" // BITS * 2
-#define ALPHA_BITS 320  // 512   //jen pro 4096
-#define MAXITER 10000
-#define RANGE 100000
+//#define ALPHA_BITS 320  // 512   //jen pro 4096
+#define MAXITER 10000   //
+#define RANGE 10000     //
 
 struct PrivateKey
 {

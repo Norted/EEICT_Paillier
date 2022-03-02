@@ -2,8 +2,8 @@ CC = /usr/bin/cc
 
 CFLAGS		= -Iheaders -Wall -g -Wextra -march=native -mtune=native -O3 -fomit-frame-pointer 
 CLIBFLAGS	= -Iheaders -std=c99 -pedantic -Wall -Wextra -g -fPIC
-INCLUDE		= -I/usr/local/include -I/usr/local/include/openssl -I/usr/local/lib
-LIBFLAGS	= -lpthread -lm -lssl -lcrypto
+INCLUDE		= -I/usr/local/include -I/usr/local/include/openssl -I/usr/local/lib -I./jsmn
+LIBFLAGS	= -lm -lssl -lcrypto -lcjson
 
 SOURCES = 	$(wildcard ./src/*.c)
 HEADERS = 	$(wildcard ./headers/*.h)
