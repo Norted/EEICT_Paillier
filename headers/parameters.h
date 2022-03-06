@@ -7,6 +7,7 @@
 #include <math.h>
 #include <limits.h>
 #include <string.h>
+#include <unistd.h>
 #include <openssl/bn.h>
 #include <openssl/sha.h>
 #include <openssl/dsa.h>
@@ -18,13 +19,14 @@
 #include <paillier_scheme3.h>
 #include <homomorphy_functions.h>
 
-#define NUM_THREADS 2   //
+// SETTINGS
+#define NUM_THREADS 4
 #define BUFFER 512      // 512, 1024
 #define BITS 512        // 512, 1024, 1500, 2048
-//#define ALPHA_BITS 320  // 512   //jen pro 4096
-#define MAXITER 10000   //
-#define RANGE 10000     //
+#define MAXITER 100//00
+#define RANGE 100//000
 
+// KEYCHAIN STRUCTURES
 struct PrivateKey
 {
     BIGNUM *p;

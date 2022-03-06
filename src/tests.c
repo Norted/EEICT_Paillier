@@ -14,18 +14,35 @@ unsigned int scheme1_test(BIGNUM *message)
 
     struct Keychain keychain;
     init_keychain(&keychain);
-    err += scheme1_generate_keypair(&keychain);
+    
+    err = scheme1_generate_keypair(&keychain);
+    if(err != 1)
+    {
+        printf("\t * Generate P, Q, G, params failed! (test, scheme 1)\n");
+        goto end;
+    }
     printf("\t |----> ERR: %u\n\t KEYS:\n\t |--> LAMBDA: %s\n\t |--> MI: %s\n\t |--> N: %s\n\t |--> N_SQ: %s\n\t |--> G: %s\n",
            err, BN_bn2dec(keychain.sk.l_or_a), BN_bn2dec(keychain.sk.mi), BN_bn2dec(keychain.pk->n),
            BN_bn2dec(keychain.pk->n_sq), BN_bn2dec(keychain.pk->g));
 
-    err += scheme1_encrypt(keychain.pk, message, enc, zero1, zero2);
+    err = scheme1_encrypt(keychain.pk, message, enc, zero1, zero2);
+    if(err != 1)
+    {
+        printf("\t * Encryption failed! (test, scheme 1)\n");
+        goto end;
+    }
     printf("\t |----> ENC: %s\n", BN_bn2dec(enc));
 
-    err += scheme1_decrypt(&keychain, enc, dec);
+    err = scheme1_decrypt(&keychain, enc, dec);
+    if(err != 1)
+    {
+        printf("\t * Decrypt failed! (test, scheme 1)\n");
+        goto end;
+    }
     printf("\t |----> MESSAGE: %s\n", BN_bn2dec(message));
     printf("\t |----> DEC: %s\n", BN_bn2dec(dec));
 
+end:
     printf("\n\n");
     free_keychain(&keychain);
     BN_free(zero1);
@@ -49,35 +66,53 @@ unsigned int scheme3_test(BIGNUM *message)
 
     struct Keychain keychain;
     init_keychain(&keychain);
-    err += scheme3_generate_keypair(&keychain);
+
+    err = scheme3_generate_keypair(&keychain);
+    if(err != 1)
+    {
+        printf("\t * Generate P, Q, G, params failed! (test, scheme 3)\n");
+        goto end;
+    }
     printf("\t |----> ERR: %u\n\t KEYS:\n\t |--> ALPHA: %s\n\t |--> MI: %s\n\t |--> N: %s\n\t |--> N_SQ: %s\n\t |--> G: %s\n\t |--> G2N: %s\n",
            err, BN_bn2dec(keychain.sk.l_or_a), BN_bn2dec(keychain.sk.mi), BN_bn2dec(keychain.pk->n),
            BN_bn2dec(keychain.pk->n_sq), BN_bn2dec(keychain.pk->g), BN_bn2dec(keychain.pk->g2n));
-    err += scheme3_encrypt(keychain.pk, keychain.sk.l_or_a, message, enc, zero1, zero2);
+    
+    err = scheme3_encrypt(keychain.pk, keychain.sk.l_or_a, message, enc, zero1, zero2);
+    if(err != 1)
+    {
+        printf("\t * Encryption failed! (test, scheme 3)\n");
+        goto end;
+    }
     printf("\t |----> ENC: %s\n", BN_bn2dec(enc));
 
-    err += scheme3_decrypt(&keychain, enc, dec);
+    err = scheme3_decrypt(&keychain, enc, dec);
+    if(err != 1)
+    {
+        printf("\t * Decryption failed! (test, scheme 3)\n");
+        goto end;
+    }
     printf("\t |----> MESSAGE: %s\n", BN_bn2dec(message));
     printf("\t |----> DEC: %s\n", BN_bn2dec(dec));
-    if(BN_cmp(message, dec) != 0)
-        return 1;
     
+end:
     printf("\n\n");
     free_keychain(&keychain);
     BN_free(zero1);
     BN_free(zero2);
     BN_free(enc);
     BN_free(dec);
-    return 0; // err
+    return err;
 }
 
 unsigned int test_homomorphy_scheme1()
 {
+    unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
-        return 0;
-
-    unsigned int err = 0;
+    {
+        printf("\t * Falied to generate CTX! (scheme 1, generate keypair)\n");
+        return err;
+    }
 
     BIGNUM *zero1 = BN_new();
     BIGNUM *zero2 = BN_new();
@@ -96,6 +131,7 @@ unsigned int test_homomorphy_scheme1()
 
     struct Keychain keychain;
     init_keychain(&keychain);
+
     err = scheme1_generate_keypair(&keychain);
     if (err != 1)
     {
@@ -206,11 +242,13 @@ end:
 
 unsigned int test_homomorphy_scheme3()
 {
+    unsigned int err = 0;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
-        return 0;
-
-    unsigned int err = 0;
+    {
+        printf("\t * Falied to generate CTX! (scheme 1, generate keypair)\n");
+        return err;
+    }
 
     BIGNUM *zero1 = BN_new();
     BIGNUM *zero2 = BN_new();
@@ -229,6 +267,7 @@ unsigned int test_homomorphy_scheme3()
 
     struct Keychain keychain;
     init_keychain(&keychain);
+
     err = scheme3_generate_keypair(&keychain);
     if (err != 1)
     {
@@ -341,10 +380,10 @@ unsigned int homomorphy_test_both()
 {
     printf("\n\t========= HOMOMORPHY TEST ===========\n");
     unsigned int err = 0;
-    err += test_homomorphy_scheme1();
+    err = test_homomorphy_scheme1();
     printf("\n\tTEST SCHEME 1\tERR: %u (if 1 → OK)\n\n\t------\n\n", err);
-    err += test_homomorphy_scheme3();
-    printf("\n\tTEST SCHEME 3\tERR: %u (if 2 → OK)\n\n", err);
+    err = test_homomorphy_scheme3();
+    printf("\n\tTEST SCHEME 3\tERR: %u (if 1 → OK)\n\n", err);
 
     return err;
 }
@@ -463,7 +502,7 @@ int cJSON_create_test(unsigned char *file_name)
     string = cJSON_Print(monitor);
     if (string == NULL)
     {
-        printf("Failed to print monitor.\n");
+        printf("\t * Failed to print monitor.\n");
     }
     else
     {
@@ -495,7 +534,7 @@ int cJSON_parse_test(unsigned char *file_name)
         const char *error_ptr = cJSON_GetErrorPtr();
         if (error_ptr != NULL)
         {
-            printf("Error before: %s\n", error_ptr);
+            printf("\t * Error before: %s\n", error_ptr);
         }
         err = 0;
         goto end;
@@ -507,7 +546,7 @@ int cJSON_parse_test(unsigned char *file_name)
     name = cJSON_GetObjectItemCaseSensitive(json, "name");
     if (cJSON_IsString(name) && (name->valuestring != NULL))
     {
-        printf("\nChecking monitor \"%s\"\n", name->valuestring);
+        printf("\t * Checking monitor \"%s\"\n", name->valuestring);
     }
 
     resolutions = cJSON_GetObjectItemCaseSensitive(json, "resolutions");

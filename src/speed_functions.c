@@ -8,70 +8,33 @@ void reduced_moduli()
 
 int precomputation(const char *restrict file_name, struct Keychain *keychain, unsigned int range, unsigned int type)
 { // type 1 ... message, 2 ... noise, 3 ... noise scheme 3
-    printf("\tPrecomputation STARTED ... \t");
+    if (type == 1)
+    {
+        printf("\t * Message precomputation STARTED ... \n");
+    }
+    else if (type == 2)
+    {
+        printf("\t * Noise scheme 1 precomputation STARTED ... \n");
+    }
+    else if (type == 3)
+    {
+        printf("\t * Noise scheme 3 precomputation STARTED ... \n");
+    }
+    else
+    {
+        printf("\t * Unknown precomputation type ... (%d)\n", type);
+        return 1;
+    }
 
     unsigned int err = 0;
     FILE *file = fopen(file_name, "w");
 
-    cJSON *monitor = cJSON_CreateObject();
-    if (monitor == NULL)
+    cJSON *json = cJSON_CreateObject();
+    if (json == NULL)
     {
         goto end;
     }
-
-    cJSON *keys = cJSON_CreateObject();
-    if (keys == NULL)
-    {
-        goto end;
-    }
-    cJSON_AddItemToObject(monitor, "keys", keys);
-
-    cJSON *pk_values = cJSON_CreateObject();
-    if (pk_values == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "n", BN_bn2dec(keychain->pk->n)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "g2n", BN_bn2dec(keychain->pk->g2n)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "n_sq", BN_bn2dec(keychain->pk->n_sq)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(pk_values, "g", BN_bn2dec(keychain->pk->g)) == NULL)
-    {
-        goto end;
-    }
-    cJSON_AddItemToObject(keys, "pk", pk_values);
-
-    cJSON *sk_values = cJSON_CreateObject();
-    if (sk_values == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "p", BN_bn2dec(keychain->sk.p)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "q", BN_bn2dec(keychain->sk.q)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "l_or_a", BN_bn2dec(keychain->sk.l_or_a)) == NULL)
-    {
-        goto end;
-    }
-    if (cJSON_AddStringToObject(sk_values, "mi", BN_bn2dec(keychain->sk.mi)) == NULL)
-    {
-        goto end;
-    }
-    cJSON_AddItemToObject(keys, "sk", sk_values);
-
+    
     cJSON *precomp = cJSON_CreateArray();
     if(type == 1)
     {
@@ -86,14 +49,25 @@ int precomputation(const char *restrict file_name, struct Keychain *keychain, un
         precomp = message_precomp(range, keychain->pk->g2n, keychain->pk->n_sq);
     }
     
-    cJSON_AddItemToObject(monitor, "precomputed_values", precomp);
+    cJSON_AddItemToObject(json, "precomputed_values", precomp);
 
-    printf("DONE\n\n");
+    if (type == 1)
+    {
+        printf("\t * Message precomputation DONE!\n");
+    }
+    else if (type == 2)
+    {
+        printf("\t * Noise scheme 1 precomputation DONE!\n");
+    }
+    else
+    {
+        printf("\t * Noise scheme 3 precomputation DONE!\n");
+    }
 
-    char *output = cJSON_Print(monitor);
+    char *output = cJSON_Print(json);
     if (output == NULL)
     {
-        printf("\t* Failed to print monitor.\n");
+        printf("\t* Failed to print json.\n");
     }
 
     if(!fputs(output, file))
@@ -103,7 +77,7 @@ int precomputation(const char *restrict file_name, struct Keychain *keychain, un
     }
 
 end:
-    cJSON_Delete(monitor);
+    cJSON_Delete(json);
 
     return fclose(file);
 }

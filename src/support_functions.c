@@ -385,19 +385,92 @@ unsigned int find_value(cJSON *json, BIGNUM *search, BIGNUM *result)
     return err;
 }
 
+int save_keys(const char *restrict file_name, struct Keychain *keychain)
+{
+    unsigned int err = 0;
+    FILE *file = fopen(file_name, "w");
+
+    cJSON *json = cJSON_CreateObject();
+    if (json == NULL)
+    {
+        goto end;
+    }
+
+    cJSON *pk_values = cJSON_CreateObject();
+    if (pk_values == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(pk_values, "n", BN_bn2dec(keychain->pk->n)) == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(pk_values, "g2n", BN_bn2dec(keychain->pk->g2n)) == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(pk_values, "n_sq", BN_bn2dec(keychain->pk->n_sq)) == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(pk_values, "g", BN_bn2dec(keychain->pk->g)) == NULL)
+    {
+        goto end;
+    }
+    cJSON_AddItemToObject(json, "pk", pk_values);
+
+    cJSON *sk_values = cJSON_CreateObject();
+    if (sk_values == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(sk_values, "p", BN_bn2dec(keychain->sk.p)) == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(sk_values, "q", BN_bn2dec(keychain->sk.q)) == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(sk_values, "l_or_a", BN_bn2dec(keychain->sk.l_or_a)) == NULL)
+    {
+        goto end;
+    }
+    if (cJSON_AddStringToObject(sk_values, "mi", BN_bn2dec(keychain->sk.mi)) == NULL)
+    {
+        goto end;
+    }
+    cJSON_AddItemToObject(json, "sk", sk_values);
+
+    char *output = cJSON_Print(json);
+    if (output == NULL)
+    {
+        printf("\t* Failed to print json.\n");
+    }
+
+    if(!fputs(output, file))
+    {
+        printf("\t * Failed to write to file %s!\n", file_name);
+        return 0;
+    }
+
+end:
+    cJSON_Delete(json);
+    
+    return fclose(file);
+}
+
 void read_keys(const char * restrict file_name, struct Keychain *keychain)
 {
     unsigned int err = 0;
     cJSON *json = cJSON_CreateObject();
     json = parse_JSON(file_name);
 
-    cJSON *keys = NULL;
     cJSON *pk = NULL;
     cJSON *sk = NULL;
     cJSON *value = NULL;
-    keys = cJSON_GetObjectItemCaseSensitive(json, "keys");
-    pk = cJSON_GetObjectItemCaseSensitive(keys, "pk");
-    sk = cJSON_GetObjectItemCaseSensitive(keys, "sk");
+    pk = cJSON_GetObjectItemCaseSensitive(json, "pk");
+    sk = cJSON_GetObjectItemCaseSensitive(json, "sk");
     
     BN_dec2bn(&keychain->pk->g2n, cJSON_GetObjectItemCaseSensitive(pk, "g2n")->valuestring);
     BN_dec2bn(&keychain->pk->g, cJSON_GetObjectItemCaseSensitive(pk, "g")->valuestring);

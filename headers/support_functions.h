@@ -17,6 +17,7 @@ void init_keychain(struct Keychain *keychain);
 void free_keychain(struct Keychain *keychain);
 cJSON *parse_JSON(const char *restrict file_name);
 unsigned int find_value(cJSON *json, BIGNUM *search, BIGNUM *result);
+int save_keys(const char *restrict file_name, struct Keychain *keychain);
 void read_keys(const char * restrict file_name, struct Keychain *keychain);
 
 #endif

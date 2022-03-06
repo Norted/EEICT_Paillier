@@ -2,11 +2,11 @@
 main
 cJSON
 
-# JSON files
-*.json
-
-# result *.csv files
-*.csv
+# json and csv files (testing, precomputed values & results)
+# precomputation_*.json
+# scheme_*.csv
+# JSON_*.json
+# saved_keys*.json
 
 # Prerequisites
 *.d
