@@ -1,13 +1,4 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
-#include <string.h>
-#include <paillier_scheme1.h>
-#include <paillier_scheme3.h>
-#include <speed_functions.h>
-#include <homomorphy_functions.h>
-#include <tests.h>
+#include <parameters.h>
 
 // definition of globals
 pthread_t threads[NUM_THREADS];
@@ -236,6 +227,10 @@ int main()
             err = cJSON_parse_test(file_json_test);
             break;
         case 18:
+            if(access(file_parse_test, F_OK))
+            {
+                err = precomputation(file_parse_test, &keychain_1, 100, 1);
+            }
             json_1_noise = parse_JSON(file_parse_test);
             err = find_value(json_1_noise, message, result);
             printf("\tSECRET: %s\n\tRESULT: %s\n", BN_bn2dec(message), BN_bn2dec(result));
