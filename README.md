@@ -4,7 +4,7 @@
  __I do not guarantee the smooth operation of the application on any device nor OS!__
  
 ## INSTALL
- `git clone https://github/Norted/EEICT_Paillier`
+ `git clone https://github.com/Norted/EEICT_Paillier.git`
 
  `cd EEICT_Paillier`
 
