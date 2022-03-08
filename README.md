@@ -1,6 +1,7 @@
 # EEICT_Paillier
  Faster Paillier implementation (for EEICT student conference)
- I do not guarantee the smooth operation of the application on any device nor OS!
+ 
+ __I do not guarantee the smooth operation of the application on any device nor OS!__
  
 ## INSTALL
  `git clone https://github/Norted/EEICT_Paillier`
@@ -11,7 +12,8 @@
 
 ## LICENSE
  
-> The MIT License (MIT)
+The MIT License (MIT)
+
 >
 > Copyright (c) 2022 Norted
 >
