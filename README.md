@@ -3,6 +3,8 @@
  
  __I do not guarantee the smooth operation of the application on any device nor OS!__
  
+ Code was developped on Linux Ubuntu 20.04.4 LTS.
+ 
 ## INSTALL
  `git clone https://github.com/Norted/EEICT_Paillier.git`
 
