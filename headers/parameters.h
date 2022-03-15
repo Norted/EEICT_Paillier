@@ -9,10 +9,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <openssl/bn.h>
-#include <openssl/sha.h>
 #include <openssl/dsa.h>
-#include <openssl/rand.h>
-#include <openssl/err.h>
 #include <cjson/cJSON.h>
 #include <support_functions.h>
 #include <paillier_scheme1.h>
