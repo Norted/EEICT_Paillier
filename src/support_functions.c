@@ -3,6 +3,7 @@
 unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicKey *pk)
 {
     unsigned int err = 0;
+    //clock_t start, finish;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
         return 0;
@@ -37,7 +38,10 @@ unsigned int gen_pqg_params(BIGNUM *p, BIGNUM *q, BIGNUM *l_or_a, struct PublicK
 
     const BIGNUM *two = BN_new();
     BN_dec2bn(&two, "2");
+    //start = clock();
     err += BN_exp(pk->n_sq, pk->n, two, ctx);
+    //finish = clock();
+    //printf("N^2 save: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
     BN_free(two);
 
     err += l_or_a_computation(p, q, l_or_a);

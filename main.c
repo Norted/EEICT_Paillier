@@ -6,7 +6,7 @@ pthread_t threads[NUM_THREADS];
 struct Keychain keychain_1;
 struct Keychain keychain_3;
 
-clock_t start, end;
+clock_t start, finish;
 double consumed_time, average_time;
 
 unsigned int err = 0;
@@ -20,18 +20,16 @@ BIGNUM *message;
 BIGNUM *result;
 
 cJSON *json_1_noise;
-cJSON *json_1_message;
 cJSON *json_3_noise;
-cJSON *json_3_message;
+cJSON *json_message;
 
 // FILE NAMES
 const char *restrict file_keys_scheme1 = "keys/saved_keys_scheme1.json";
 const char *restrict file_keys_scheme3 = "keys/saved_keys_scheme3.json";
 
 const char *restrict file_scheme1_precomputed_noise = "precomputed_values/precomputation_1_noise.json";
-const char *restrict file_scheme1_precomputed_message = "precomputed_values/precomputation_1_message.json";
 const char *restrict file_scheme3_precomputed_noise = "precomputed_values/precomputation_3_noise.json";
-const char *restrict file_scheme3_precomputed_message = "precomputed_values/precomputation_3_message.json";
+const char *restrict file_precomputed_message = "precomputed_values/precomputation_message.json";
 
 const char *restrict file_scheme1_results = "results/scheme_1.csv";
 const char *restrict file_scheme3_results = "results/scheme_3.csv";
@@ -65,9 +63,8 @@ int main()
     BN_dec2bn(&range, string);
 
     json_1_noise = cJSON_CreateObject();
-    json_1_message = cJSON_CreateObject();
+    json_message = cJSON_CreateObject();
     json_3_noise = cJSON_CreateObject();
-    json_3_message = cJSON_CreateObject();
 
     init_keychain(&keychain_1);
     init_keychain(&keychain_3);
@@ -109,8 +106,8 @@ int main()
         read_keys(file_keys_scheme3, &keychain_3);
     }
 
-    if (access(file_scheme1_precomputed_noise, F_OK) || access(file_scheme1_precomputed_message, F_OK) ||
-        access(file_scheme3_precomputed_noise, F_OK) || access(file_scheme3_precomputed_message, F_OK) )
+    if (access(file_scheme1_precomputed_noise, F_OK) || access(file_precomputed_message, F_OK) ||
+        access(file_scheme3_precomputed_noise, F_OK) )
     {
         threaded_precomputation();
         for (int i = 0; i < NUM_THREADS; i++)
@@ -123,9 +120,8 @@ int main()
     }
     
     json_1_noise = parse_JSON(file_scheme1_precomputed_noise);
-    json_1_message = parse_JSON(file_scheme1_precomputed_message);
+    json_message = parse_JSON(file_precomputed_message);
     json_3_noise = parse_JSON(file_scheme3_precomputed_noise);
-    json_3_message = parse_JSON(file_scheme3_precomputed_message);
 
     /* MENU     */
     while (run)
@@ -265,8 +261,7 @@ int main()
 
     cJSON_free(json_1_noise);
     cJSON_free(json_3_noise);
-    cJSON_free(json_1_message);
-    cJSON_free(json_3_message);
+    cJSON_free(json_message);
 
     printf("DONE!\n\t* Thank You! Bye! :)\n");
     pthread_exit(NULL);
@@ -275,7 +270,7 @@ int main()
 }
 
 void *thread_creation(void *threadid)
-{ // precomputation type: 1 ... message, 2 ... noise, 3 ... noise scheme 3
+{ // precomputation type: 0 ... scheme 1 noise, 2 ... scheme 3 noise, 3 ... message
     long tid;
     tid = (long)threadid;
     if (tid == 0)
@@ -289,15 +284,6 @@ void *thread_creation(void *threadid)
     }
     else if (tid == 1)
     {
-        err = precomputation(file_scheme1_precomputed_message, &keychain_1, RANGE, 1);
-        if (err != 0)
-        {
-            printf("\t * Scheme 1 message precomputation failed!\n");
-            pthread_exit(NULL);
-        }
-    }
-    else if (tid == 2)
-    {
         err = precomputation(file_scheme3_precomputed_noise, &keychain_3, RANGE, 3);
         if (err != 0)
         {
@@ -305,12 +291,12 @@ void *thread_creation(void *threadid)
             pthread_exit(NULL);
         }
     }
-    else if (tid == 3)
+    else if (tid == 2)
     {
-        err = precomputation(file_scheme3_precomputed_message, &keychain_3, RANGE, 1);
+        err = precomputation(file_precomputed_message, &keychain_1, RANGE, 1);
         if (err != 0)
         {
-            printf("\t * Scheme 3 message precomputation failed!\n");
+            printf("\t * Message precomputation failed!\n");
             pthread_exit(NULL);
         }
     }
@@ -407,7 +393,7 @@ int scheme1(const char *restrict result_file_name, const char *mode, BIGNUM *mes
                     goto end;
             }
 
-            err = find_value(json_1_message, message, precomp_message);
+            err = find_value(json_message, message, precomp_message);
             if (err != 1)
                 goto end;
             // printf("M: %s\nP: %s\n", BN_bn2dec(message), BN_bn2dec(precomp_message));
@@ -419,14 +405,14 @@ int scheme1(const char *restrict result_file_name, const char *mode, BIGNUM *mes
 
         start = clock();
         err = scheme1_encrypt(keychain_1.pk, message, enc, precomp_message, precomp_noise);
-        end = clock();
-        consumed_time = difftime(end, start);
+        finish = clock();
+        consumed_time = difftime(finish, start);
         if (err != 1)
         {
             printf("\t * Scheme 1 encryption failed (main)!\n");
             goto end;
         }
-        printer = fprintf(file, "%0.1f\t", consumed_time);
+        printer = fprintf(file, "%f\t", consumed_time/CLOCKS_PER_SEC);
         if (printer < 0)
         {
             printf("\t * Printing to file failed!\n");
@@ -435,14 +421,14 @@ int scheme1(const char *restrict result_file_name, const char *mode, BIGNUM *mes
 
         start = clock();
         err = scheme1_decrypt(&keychain_1, enc, dec);
-        end = clock();
-        consumed_time = difftime(end, start);
+        finish = clock();
+        consumed_time = difftime(finish, start);
         if (err != 1)
         {
             printf("\t * Scheme 1 decryption failed (main)!\n");
             goto end;
         }
-        printer = fprintf(file, "%0.1f\t", consumed_time);
+        printer = fprintf(file, "%f\t", consumed_time/CLOCKS_PER_SEC);
         if (printer < 0)
         {
             printf("\t * Printing to file failed!\n");
@@ -539,7 +525,7 @@ int scheme3(const char *restrict result_file_name, const char *mode, BIGNUM *mes
                     goto end;
             }
 
-            err = find_value(json_3_message, message, precomp_message);
+            err = find_value(json_message, message, precomp_message);
             if (err != 1)
                 goto end;
         }
@@ -550,9 +536,9 @@ int scheme3(const char *restrict result_file_name, const char *mode, BIGNUM *mes
 
         start = clock();
         err += scheme3_encrypt(keychain_3.pk, keychain_3.sk.l_or_a, message, enc, precomp_message, precomp_noise);
-        end = clock();
-        consumed_time = difftime(end, start);
-        printer = fprintf(file, "%0.1f\t", consumed_time);
+        finish = clock();
+        consumed_time = difftime(finish, start);
+        printer = fprintf(file, "%f\t", consumed_time/CLOCKS_PER_SEC);
         if (printer < 0)
         {
             printf("\t * Printing to file failed!\n");
@@ -561,9 +547,9 @@ int scheme3(const char *restrict result_file_name, const char *mode, BIGNUM *mes
 
         start = clock();
         err += scheme3_decrypt(&keychain_3, enc, dec);
-        end = clock();
-        consumed_time = difftime(end, start);
-        printer = fprintf(file, "%0.1f\t", consumed_time);
+        finish = clock();
+        consumed_time = difftime(finish, start);
+        printer = fprintf(file, "%f\t", consumed_time/CLOCKS_PER_SEC);
         if (printer < 0)
         {
             printf("\t * Printing to file failed!\n");

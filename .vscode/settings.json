@@ -26,6 +26,15 @@
         "tuple": "c",
         "type_traits": "c",
         "cjson.h": "c",
-        "numeric": "c"
+        "numeric": "c",
+        "cmath": "c",
+        "deque": "c",
+        "string": "c",
+        "unordered_map": "c",
+        "vector": "c",
+        "exception": "c",
+        "memory": "c",
+        "sstream": "c",
+        "streambuf": "c"
     }
 }

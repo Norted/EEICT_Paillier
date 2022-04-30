@@ -3,6 +3,7 @@
 unsigned int scheme1_generate_keypair(struct Keychain *keychain)
 {
     unsigned int err = 0;
+    //clock_t start, finish;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
@@ -16,7 +17,11 @@ unsigned int scheme1_generate_keypair(struct Keychain *keychain)
         printf("\t * Generate P, Q, G, params failed! (scheme 1, generate keypair)\n");
         goto end;
     }
+    //start = clock();
     err = count_mi(keychain->sk.mi, keychain->pk->g, keychain->sk.l_or_a, keychain->pk->n_sq, keychain->pk->n);
+    //finish = clock();
+    //printf("MI 1 save: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
+
     if(err != 1)
     {
         printf("\t * Count MI failed! (scheme 1, generate keypair)\n");
@@ -31,6 +36,7 @@ end:
 unsigned int scheme1_encrypt(struct PublicKey *pk, BIGNUM *plain, BIGNUM *cipher, BIGNUM *precomp_message, BIGNUM *precomp_noise)
 {
     unsigned int err = 0;
+    //clock_t start, finish;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
@@ -48,7 +54,10 @@ unsigned int scheme1_encrypt(struct PublicKey *pk, BIGNUM *plain, BIGNUM *cipher
 
     if (BN_is_zero(precomp_message) == 1)
     {
+        //start = clock();
         err = BN_mod_exp(precomp_message, pk->g, plain, pk->n_sq, ctx);
+        //finish = clock();
+        //printf("MSG save: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
         if(err != 1)
         {
             printf("\t * Message mod_exp operation falied! (scheme 1, encrypt)\n");
@@ -58,6 +67,7 @@ unsigned int scheme1_encrypt(struct PublicKey *pk, BIGNUM *plain, BIGNUM *cipher
     
     if (BN_is_zero(precomp_noise) == 1)
     {
+        //start = clock();
         err = generate_rnd(pk->n, pk->n, tmp_rnd, BITS);
         if(err != 1)
         {
@@ -65,6 +75,8 @@ unsigned int scheme1_encrypt(struct PublicKey *pk, BIGNUM *plain, BIGNUM *cipher
             goto end;
         }
         err = BN_mod_exp(precomp_noise, tmp_rnd, pk->n, pk->n_sq, ctx);
+        //finish = clock();
+        //printf("NOISE save: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
         if(err != 1)
         {
             printf("\t * Noise mod_exp operation falied! (scheme 1, encrypt)\n");

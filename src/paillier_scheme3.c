@@ -5,6 +5,7 @@ unsigned int _keychain_gen(struct Keychain *keychain);
 unsigned int scheme3_generate_keypair(struct Keychain *keychain)
 {
     unsigned int err = 0;
+    //clock_t start, finish;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
@@ -115,13 +116,19 @@ unsigned int scheme3_generate_keypair(struct Keychain *keychain)
         goto end;
     }
 
+    //start = clock();
     err = BN_mod_exp(keychain->pk->g2n, keychain->pk->g, keychain->pk->n, keychain->pk->n_sq, ctx);
+    //finish = clock();
+    //printf("G^N save: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
     if (err != 1)
     {
         printf("\t * G2N computation failed! (scheme 3, generate keypair)\n");
         goto end;
     }
+    //start = clock();
     err = count_mi(keychain->sk.mi, keychain->pk->g, keychain->sk.l_or_a, keychain->pk->n_sq, keychain->pk->n);
+    //finish = clock();
+    //printf("MI 3 save: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
     if (err != 1)
     {
         printf("\t * MI computation failed! (scheme 3, generate keypair)\n");
@@ -145,6 +152,7 @@ end:
 unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain, BIGNUM *cipher, BIGNUM *precomp_message, BIGNUM *precomp_noise)
 {
     unsigned int err = 0;
+    //clock_t start, finish;
     BN_CTX *ctx = BN_CTX_secure_new();
     if (!ctx)
     {
@@ -160,8 +168,6 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain
         goto end;
     }
 
-    // FIX ME!!!
-    // SLOW CODE!!!
     if (BN_is_zero(precomp_message) == 1)
     {
         err = BN_mod_exp(precomp_message, pk->g, plain, pk->n_sq, ctx);
@@ -174,6 +180,7 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain
 
     if (BN_is_zero(precomp_noise) == 1)
     {
+        //start = clock();
         err = generate_rnd(l_or_a, l_or_a, tmp_rnd, BITS / 2);
         if(err != 1)
         {
@@ -181,6 +188,8 @@ unsigned int scheme3_encrypt(struct PublicKey *pk, BIGNUM *l_or_a, BIGNUM *plain
             goto end;
         }
         err = BN_mod_exp(precomp_noise, pk->g2n, tmp_rnd, pk->n_sq, ctx); // BOTTLENECK!!!
+        //finish = clock();
+        //printf("NOISE 3: %f\n", (difftime(finish, start)/CLOCKS_PER_SEC)/0.001);
         if(err != 1)
         {
             printf("\t * Noise mod_exp operation falied! (scheme 3, encrypt)\n");

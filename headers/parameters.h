@@ -17,7 +17,7 @@
 #include <homomorphy_functions.h>
 
 // SETTINGS
-#define NUM_THREADS 4
+#define NUM_THREADS 3
 #define BUFFER 512      // 512, 1024
 #define BITS 512        // 512, 1024, 1500, 2048
 #define MAXITER 100//00
