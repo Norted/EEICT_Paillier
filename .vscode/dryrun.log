@@ -1,0 +1,11 @@
+make --dry-run --always-make --keep-going --print-directory
+make: Entering directory '/home/stepa/Plocha/IBEP-T/Paillier_EEICT/Code/EEICT_Paillier'
+rm -f main
+rm -rf *.o
+rm -f *.json
+rm -f ./keys/*.json
+rm -f ./precomputed_values/*.json
+rm -f ./results/*.csv
+/usr/bin/cc -Iheaders -Wall -g -Wextra -march=native -mtune=native -O3 -fomit-frame-pointer  ./src/paillier_scheme1.c ./src/tests.c ./src/speed_functions.c ./src/paillier_scheme3.c ./src/homomorphy_functions.c ./src/support_functions.c -I/usr/local/include -I/usr/local/include/openssl -I/usr/local/lib main.c -o main -lm -lssl -lcrypto -lcjson -lpthread
+make: Leaving directory '/home/stepa/Plocha/IBEP-T/Paillier_EEICT/Code/EEICT_Paillier'
+ 

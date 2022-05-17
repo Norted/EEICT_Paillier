@@ -1,11 +1,5 @@
 #include <speed_functions.h>
 
-void reduced_moduli()
-{
-    // LAST!!!
-    return;
-}
-
 int precomputation(const char *restrict file_name, struct Keychain *keychain, unsigned int range, unsigned int type)
 { // type 1 ... message, 2 ... noise, 3 ... noise scheme 3
     if (type == 1)
